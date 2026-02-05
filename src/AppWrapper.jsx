@@ -52,7 +52,7 @@ export default function AppWrapper() {
 
   const migrateLocalDataToSupabase = async (user) => {
     try {
-      const 'mybookmark_children' = JSON.parse(localStorage.getItem('children') || '[]')
+      const 'mybookmark_children' = JSON.parse(localStorage.getItem('mybookmark_children') || '[]')
       const logs = JSON.parse(localStorage.getItem('mybookmark_logs') || '[]')
       
       if (children.length === 0 && logs.length === 0) {
