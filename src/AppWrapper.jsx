@@ -38,8 +38,8 @@ export default function AppWrapper() {
 
   const checkForLocalData = () => {
     try {
-      const children = JSON.parse(localStorage.getItem('children') || '[]')
-      const logs = JSON.parse(localStorage.getItem('readingLogs') || '[]')
+      const children = JSON.parse(localStorage.getItem('mybookmark_children') || '[]')
+      const logs = JSON.parse(localStorage.getItem('mybookmark_logs') || '[]')
       
       // Show banner if they have data
       if (children.length > 0 || logs.length > 0) {
@@ -52,8 +52,8 @@ export default function AppWrapper() {
 
   const migrateLocalDataToSupabase = async (user) => {
     try {
-      const children = JSON.parse(localStorage.getItem('children') || '[]')
-      const logs = JSON.parse(localStorage.getItem('readingLogs') || '[]')
+      const 'mybookmark_children' = JSON.parse(localStorage.getItem('children') || '[]')
+      const logs = JSON.parse(localStorage.getItem('mybookmark_logs') || '[]')
       
       if (children.length === 0 && logs.length === 0) {
         return // Nothing to migrate
