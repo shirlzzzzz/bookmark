@@ -4185,8 +4185,9 @@ function SettingsModal({
                         className={`py-3 text-sm font-medium text-center ${activeTab === 'data' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
                     >
                         Data
-                        <button
-                        onClick={() => setActiveTab('account')}
+                   </button>
+                   <button
+                       onClick={() => setActiveTab('account')}
                         className={`py-3 text-sm font-medium text-center ${activeTab === 'account' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
                     >
                         Account
