@@ -1,6 +1,6 @@
 // MyBookmark App
 import React, { useState, useEffect } from 'react';
-
+import { supabase } from './supabaseClient';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -82,7 +82,8 @@ export default function App() {
     const [shareCardChild, setShareCardChild] = useState(null);
     const [celebration, setCelebration] = useState(null); // { childName, bookTitle }
     const [error, setError] = useState(null);
-
+// Auth state
+    const [user, setUser] = useState(null);
     const completeOnboarding = (profile, newChildren) => {
         setFamilyProfile(profile);
         setStorageData('mybookmark_family', profile);
@@ -92,7 +93,24 @@ export default function App() {
         localStorage.setItem('mybookmark_onboarded', 'true');
         setShowOnboarding(false);
     };
+// Auth effect - check session and listen for changes
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+        });
 
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // Sign out function
+    const handleSignOut = async () => {
+        await supabase.auth.signOut();
+        setUser(null);
+    };
     useEffect(() => {
         try {
             setChildren(getStorageData('mybookmark_children', []));
@@ -767,6 +785,12 @@ export default function App() {
                         onExport={exportData}
                         onImport={importData}
                         onClose={() => setShowSettings(false)}
+                        user={user}
+                        onSignOut={handleSignOut}
+                        onSignIn={() => {
+                            setShowSettings(false);
+                            window.location.reload(); // This will show the auth banner
+                        }}
                     />
                 )}
 
@@ -4104,7 +4128,10 @@ function SettingsModal({
     onLeaveClass,
     onExport, 
     onImport, 
-    onClose 
+    onClose,
+    user,
+    onSignOut,
+    onSignIn
 }) {
     const [activeTab, setActiveTab] = useState('family');
     const [importing, setImporting] = useState(false);
@@ -4140,7 +4167,7 @@ function SettingsModal({
                 </div>
 
                 {/* Tabs */}
-                <div className="grid grid-cols-3 border-b">
+                <div className="grid grid-cols-4 border-b">
                     <button
                         onClick={() => setActiveTab('family')}
                         className={`py-3 text-sm font-medium text-center ${activeTab === 'family' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
@@ -4158,6 +4185,11 @@ function SettingsModal({
                         className={`py-3 text-sm font-medium text-center ${activeTab === 'data' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
                     >
                         Data
+                        <button
+                        onClick={() => setActiveTab('account')}
+                        className={`py-3 text-sm font-medium text-center ${activeTab === 'account' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
+                    >
+                        Account
                     </button>
                 </div>
 
@@ -4292,6 +4324,49 @@ function SettingsModal({
                     )}
 
                     {/* Data Tab */}
+                    {/* Account Tab */}
+                    {activeTab === 'account' && (
+                        <div className="space-y-4">
+                            {user ? (
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-green-600">✓</span>
+                                            <span className="font-medium text-green-800">Signed In</span>
+                                        </div>
+                                        <p className="text-sm text-green-700">{user.email}</p>
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                        Your data is being synced to the cloud. You can access it from any device.
+                                    </p>
+                                    <button
+                                        onClick={onSignOut}
+                                        className="w-full bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                                        <h3 className="font-medium text-purple-800 mb-2">📚 Save Your Data</h3>
+                                        <p className="text-sm text-purple-700">
+                                            Sign in to sync your reading data across all your devices and keep it safe in the cloud.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={onSignIn}
+                                        className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
+                                    >
+                                        Sign In to Save Data
+                                    </button>
+                                    <p className="text-xs text-gray-400 text-center">
+                                        Your data is currently stored only in this browser.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {activeTab === 'data' && (
                         <div className="space-y-4">
                             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
