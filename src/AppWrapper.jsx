@@ -63,10 +63,10 @@ export default function AppWrapper() {
       
       // 1. Migrate children
       const childrenToInsert = children.map(child => ({
-        user_id: user.id,
-        name: child.name,
-        grade: child.grade || null,
-        avatar_url: child.avatar || null
+           user_id: user.id,
+           name: child.name,
+           grade: child.childType || child.grade || null,
+           avatar_url: child.avatar || null
       }))
 
       const { data: insertedChildren, error: childrenError } = await supabase
