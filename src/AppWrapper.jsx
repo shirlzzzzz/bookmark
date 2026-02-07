@@ -58,8 +58,6 @@ export default function AppWrapper() {
       if (children.length === 0 && logs.length === 0) {
         return // Nothing to migrate
       }
-
-      console.log('Migrating data to Supabase...')
       
       // 1. Migrate children
       const childrenToInsert = children.map(child => ({
@@ -121,8 +119,6 @@ export default function AppWrapper() {
         .insert(logsToInsert)
 
       if (logsError) throw logsError
-
-      console.log('Migration complete!')
       
       // Mark as migrated
       localStorage.setItem('migratedToSupabase', 'true')

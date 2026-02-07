@@ -1893,7 +1893,6 @@ function AddLogModal({ children, logs, onClose, onAdd }) {
 
     // Parse voice input like "Emma Charlotte's Web 20 minutes"
     const parseVoiceInput = (transcript) => {
-        console.log('Voice transcript:', transcript);
 
         // Try to extract minutes
         let extractedMinutes = '';
@@ -2381,6 +2380,8 @@ function ReportModal({ child, logs, onClose }) {
             const avgMinutes = Math.round(totalMinutes / filteredLogs.length) || 0;
 
             // Create PDF
+const teacherName = ""; // TODO
+
             const doc = new jsPDF();
             const pageWidth = doc.internal.pageSize.getWidth();
             
@@ -2410,6 +2411,8 @@ function ReportModal({ child, logs, onClose }) {
             doc.text(`Books Read: ${totalBooks}`, 20, 72);
             doc.text(`Days Read: ${daysRead}`, pageWidth / 2, 65);
             doc.text(`Avg per Session: ${avgMinutes} min`, pageWidth / 2, 72);
+if (teacherName) doc.text(`Teacher: ${teacherName}`, 20, 79);
+
             
             // Reading Goal
             if (child.goal) {
@@ -2467,6 +2470,12 @@ function ReportModal({ child, logs, onClose }) {
                 doc.text('Parent/Guardian Signature: _______________________', 20, footerY);
                 doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 60, footerY);
             }
+	const pageHeight = doc.internal.pageSize.getHeight();
+	doc.setFontSize(9);
+	doc.setTextColor(120);
+	doc.text("Generated with OurBookmark - ourbookmark.com", pageWidth / 2, pageHeight - 10, { align: "center" });
+	doc.setTextColor(0);
+
             
             // Save the PDF
             const fileName = `${child.name.replace(/\s+/g, '_')}_Reading_Report.pdf`;
