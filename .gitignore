@@ -1,0 +1,11 @@
+# env files
+.env.local
+.env.*
+*.backup
+
+# builds + deps
+dist/
+node_modules/
+
+# OS cruft
+.DS_Store
