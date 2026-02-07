@@ -1,6 +1,7 @@
 // MyBookmark App
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import jsPDF from 'jspdf';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -2373,64 +2374,105 @@ function ReportModal({ child, logs, onClose }) {
                 return logDate >= new Date(startDate) && logDate <= new Date(endDate);
             });
 
-            // Call the Claude API to generate PDF
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 4000,
-                    messages: [
-                        {
-                            role: "user",
-                            content: `Create a professional reading log PDF report for a child. Use Python with reportlab library.
+            // Calculate statistics
+            const totalMinutes = filteredLogs.reduce((sum, log) => sum + log.minutes, 0);
+            const totalBooks = new Set(filteredLogs.map(l => l.bookTitle)).size;
+            const daysRead = new Set(filteredLogs.map(l => l.date)).size;
+            const avgMinutes = Math.round(totalMinutes / filteredLogs.length) || 0;
 
-Child Information:
-- Name: ${child.name}
-- Grade: ${child.grade || 'Not specified'}
-- Reading Goal: ${child.goal?.minutesPerDay || 20} minutes/day, ${child.goal?.daysPerWeek || 5} days/week
-
-Report Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}
-
-Reading Sessions (${filteredLogs.length} total):
-${filteredLogs.map(log => `- ${new Date(log.date).toLocaleDateString()}: ${log.bookTitle} - ${log.minutes} minutes`).join('\n')}
-
-Statistics:
-- Total Minutes: ${filteredLogs.reduce((sum, log) => sum + log.minutes, 0)}
-- Total Books: ${new Set(filteredLogs.map(l => l.bookTitle)).size}
-- Days Read: ${new Set(filteredLogs.map(l => l.date)).size}
-- Average Minutes per Session: ${Math.round(filteredLogs.reduce((sum, log) => sum + log.minutes, 0) / filteredLogs.length) || 0}
-
-Create a clean, professional PDF with:
-1. Header with child's name and report period
-2. Summary statistics in a nice layout
-3. Detailed reading log table (date, book title, minutes)
-4. Parent signature line at bottom
-5. School-ready formatting
-
-Save the PDF to /mnt/user-data/outputs/${child.name.replace(/\s+/g, '_')}_Reading_Report.pdf
-
-Use reportlab to create a beautiful, print-ready document.`
-                        }
-                    ],
-                })
-            });
-
-            const data = await response.json();
+            // Create PDF
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
             
-            // Check if PDF was created successfully
-            const pdfCreated = data.content?.some(block => 
-                block.type === 'text' && block.text.includes('Reading_Report.pdf')
-            );
-
-            if (pdfCreated) {
-                alert(`Report generated successfully! Check your downloads for ${child.name}'s reading report.`);
-                onClose();
-            } else {
-                alert('Report generation in progress. Please check the outputs folder.');
+            // Header
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Reading Report', pageWidth / 2, 20, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text(child.name, pageWidth / 2, 30, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 38, { align: 'center' });
+            
+            // Summary Statistics Box
+            doc.setFillColor(245, 245, 250);
+            doc.rect(15, 45, pageWidth - 30, 35, 'F');
+            
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Summary', 20, 55);
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Total Reading Time: ${totalMinutes} minutes`, 20, 65);
+            doc.text(`Books Read: ${totalBooks}`, 20, 72);
+            doc.text(`Days Read: ${daysRead}`, pageWidth / 2, 65);
+            doc.text(`Avg per Session: ${avgMinutes} min`, pageWidth / 2, 72);
+            
+            // Reading Goal
+            if (child.goal) {
+                doc.text(`Goal: ${child.goal.minutesPerDay || 20} min/day, ${child.goal.daysPerWeek || 5} days/week`, 20, 79);
             }
+            
+            // Reading Log Table
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Reading Log', 20, 95);
+            
+            // Table Header
+            doc.setFillColor(102, 126, 234);
+            doc.rect(15, 100, pageWidth - 30, 8, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.text('Date', 20, 105);
+            doc.text('Book Title', 55, 105);
+            doc.text('Minutes', pageWidth - 35, 105);
+            
+            // Table Rows
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            let y = 115;
+            
+            filteredLogs.forEach((log, index) => {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                // Alternate row colors
+                if (index % 2 === 0) {
+                    doc.setFillColor(249, 249, 252);
+                    doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
+                }
+                
+                doc.text(new Date(log.date).toLocaleDateString(), 20, y);
+                
+                // Truncate long book titles
+                let bookTitle = log.bookTitle || 'Unknown';
+                if (bookTitle.length > 45) {
+                    bookTitle = bookTitle.substring(0, 42) + '...';
+                }
+                doc.text(bookTitle, 55, y);
+                doc.text(String(log.minutes), pageWidth - 35, y);
+                
+                y += 8;
+            });
+            
+            // Footer with signature line
+            const footerY = Math.max(y + 20, 250);
+            if (footerY < 280) {
+                doc.setFontSize(10);
+                doc.text('Parent/Guardian Signature: _______________________', 20, footerY);
+                doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 60, footerY);
+            }
+            
+            // Save the PDF
+            const fileName = `${child.name.replace(/\s+/g, '_')}_Reading_Report.pdf`;
+            doc.save(fileName);
+            
+            onClose();
         } catch (error) {
             console.error('Error generating report:', error);
             alert('Failed to generate report. Please try again.');
