@@ -9,3 +9,4 @@ node_modules/
 
 # OS cruft
 .DS_Store
+.env.local
