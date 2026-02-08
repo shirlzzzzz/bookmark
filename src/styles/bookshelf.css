@@ -56,8 +56,14 @@
 
 @media (max-width: 480px) {
   .ob-bookCover {
-    width: 92px;
-    height: 138px;
+    width: 110px;      /* tweak: 104–120 */
+    height: 165px;     /* keeps nice book ratio */
+    object-fit: contain;
+    background: #fff;
+  }
+
+  .ob-shelfRow {
+    gap: 14px;         /* a little breathing room */
   }
 }
 
