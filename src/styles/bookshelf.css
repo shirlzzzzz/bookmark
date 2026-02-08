@@ -32,6 +32,27 @@
   -webkit-overflow-scrolling: touch;
 }
 
+@media (max-width: 480px) {
+  .ob-shelfRow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow-x: hidden;         /* stop horizontal scroll on mobile */
+    gap: 10px;
+  }
+
+  .ob-bookTile {
+    width: 100%;
+  }
+
+  .ob-bookCover {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+  }
+}
+
+
 .ob-bookTile {
   position: relative;
   border: none;
