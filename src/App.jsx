@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
+import BookshelfShelves from "./components/BookshelfShelves";
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -1372,99 +1373,19 @@ function BookshelfView({ children, logs, selectedChild, onSelectChild, onOpenSet
                 </div>
             ) : (
                 <div>
-                    {/* Loved & Reread Section */}
-                    {(() => {
-                        const rereadBooks = books.filter(b => b.timesRead > 1);
-                        if (rereadBooks.length === 0) return null;
-                        
-                        return (
-                            <div className="mb-6">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <span className="text-lg">💜</span>
-                                    <h3 className="font-semibold text-purple-800">Loved & Reread</h3>
-                                    <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
-                                        {rereadBooks.length} favorite{rereadBooks.length !== 1 ? 's' : ''}
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {rereadBooks.map((book, idx) => (
-                                        <div key={idx} className="relative group">
-                                            {book.coverUrl ? (
-                                                <img 
-                                                    src={book.coverUrl} 
-                                                    alt={book.title}
-                                                    className="w-full h-32 object-cover rounded-lg shadow-md ring-2 ring-purple-300 hover:shadow-xl transition-shadow"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.nextSibling.style.display = 'flex';
-                                                    }}
-                                                />
-                                            ) : null}
-                                            <div 
-                                                className={`w-full h-32 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg shadow-md ring-2 ring-purple-300 flex items-center justify-center p-2 ${book.coverUrl ? 'hidden' : 'flex'}`}
-                                            >
-                                                <span className="text-white text-xs text-center font-medium leading-tight line-clamp-3">
-                                                    {book.title.split(' by ')[0]}
-                                                </span>
-                                            </div>
-                                            
-                                            {/* Reread count badge */}
-                                            <div className="absolute top-1 right-1 bg-purple-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-md">
-                                                ↻ {book.timesRead}
-                                            </div>
-                                            
-                                            {/* Hover overlay */}
-                                            <div className="absolute inset-0 bg-black bg-opacity-75 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
-                                                <span className="text-white text-xs text-center font-medium mb-1 line-clamp-2">{book.title.split(' by ')[0]}</span>
-                                                <span className="text-purple-300 text-xs">{book.totalMinutes} min total</span>
-                                                <span className="text-yellow-300 text-xs font-medium">💜 Read {book.timesRead} times</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })()}
                     
-                    {/* All Books Section */}
-                    <div>
-                        <h3 className="font-semibold text-gray-700 mb-3">📚 All Books</h3>
-                        <div className="grid grid-cols-3 gap-3">
-                            {books.filter(b => b.timesRead === 1).map((book, idx) => (
-                                <div key={idx} className="relative group">
-                                    {book.coverUrl ? (
-                                        <img 
-                                            src={book.coverUrl} 
-                                            alt={book.title}
-                                            className="w-full h-32 object-cover rounded-lg shadow-md hover:shadow-xl transition-shadow"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div 
-                                        className={`w-full h-32 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg shadow-md flex items-center justify-center p-2 ${book.coverUrl ? 'hidden' : 'flex'}`}
-                                    >
-                                        <span className="text-white text-xs text-center font-medium leading-tight line-clamp-3">
-                                            {book.title.split(' by ')[0]}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Hover overlay */}
-                                    <div className="absolute inset-0 bg-black bg-opacity-75 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
-                                        <span className="text-white text-xs text-center font-medium mb-1 line-clamp-2">{book.title.split(' by ')[0]}</span>
-                                        <span className="text-purple-300 text-xs">{book.totalMinutes} min</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    {/* New Bookshelf Shelves */}
+                    <BookshelfShelves
+                     childName={child?.name || "your child"}
+                     favorites={books.filter((b) => (b.timesRead || 0) > 1)}
+                     allBooks={books}
+                     onOpenBook={(book) => console.log("Clicked book:", book)}
+                    />
                     </div>
-                </div>
-            )}
-        </div>
-    );
-}
+                    )}
+                    </div>
+                    );
+                    }
 
 // Kids View Component
 function KidsView({ children, onAddChild, onDeleteChild, classGroups, onJoinClass, onCreateClass, onLeaveClass }) {

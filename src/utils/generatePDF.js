@@ -137,6 +137,26 @@ export const generateReadingReportPDF = async (
     
     // Save the PDF
     const fileName = `${childName.replace(/\s+/g, '-')}-Reading-Report-${new Date().toISOString().split('T')[0]}.pdf`;
+
+    // Footer (draw on every page)
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const totalPages = doc.getNumberOfPages();
+
+    for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(
+    "Generated with OurBookmark — ourbookmark.com",
+    pageWidth / 2,
+    pageHeight - 10,
+    { align: "center" }
+  );
+    doc.setTextColor(0);
+}
+
+    // Save the PDF (keep this after the loop)
     doc.save(fileName);
     
     return { success: true, fileName };

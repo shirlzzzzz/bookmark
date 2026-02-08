@@ -41,10 +41,7 @@ const PDFReportModal = ({
       setError('Please enter school name');
       return;
     }
-    if (!formData.teacherName.trim()) {
-      setError('Please enter teacher name');
-      return;
-    }
+    
     if (!formData.parentName.trim()) {
       setError('Please enter parent/guardian name');
       return;
