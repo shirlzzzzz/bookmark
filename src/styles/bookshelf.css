@@ -44,11 +44,21 @@
 
 .ob-bookCover {
   width: 96px;
-  height: 128px;
+  aspect-ratio: 2 / 3;   /* keeps book shape */
+  height: auto;          /* prevents squishing */
   border-radius: 14px;
-  object-fit: cover;
-  box-shadow: 0 12px 18px rgba(0,0,0,0.18);
+  object-fit: contain;   /* shows full cover */
+  background: #fff;
+  box-shadow: 0 12px 18px rgba(0, 0, 0, 0.18);
   transform: translateY(2px);
+  display: block;
+}
+
+@media (max-width: 480px) {
+  .ob-bookCover {
+    width: 92px;
+    height: 138px;
+  }
 }
 
 .ob-badge {
