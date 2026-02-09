@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient'
 export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
 
   const handleLogin = async (e) => {
@@ -11,17 +12,15 @@ export default function Auth() {
     setLoading(true)
     setMessage('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      }
-    })
+    const { error } = await supabase.auth.signInWithPassword({
+  email: email,
+  password: password,
+})
 
     if (error) {
       setMessage('Error: ' + error.message)
     } else {
-      setMessage('Check your email for the login link!')
+      setMessage('Login successful!')
     }
     setLoading(false)
   }
@@ -41,8 +40,21 @@ export default function Auth() {
             padding: '10px',
             marginBottom: '10px',
             fontSize: '16px'
-          }}
-        />
+          }} />
+          <input
+  type="password"
+  placeholder="Password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  required
+  style={{
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    fontSize: '16px'
+  }}
+/>
+      
         <button
           type="submit"
           disabled={loading}
@@ -56,7 +68,7 @@ export default function Auth() {
             cursor: loading ? 'not-allowed' : 'pointer'
           }}
         >
-          {loading ? 'Sending...' : 'Send Magic Link'}
+          {loading ? 'Logging in...' : 'Sign In'}
         </button>
       </form>
       {message && <p style={{ marginTop: '10px' }}>{message}</p>}
