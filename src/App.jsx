@@ -309,6 +309,14 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         ));
     };
 
+    const updateChild = (childId, updates) => {
+        setChildren(children.map(child => 
+            child.id === childId 
+                ? { ...child, ...updates }
+                : child
+        ));
+    };
+
     const deleteChild = (id) => {
         if (confirm('Delete this child? Their reading logs will remain but won\'t show in summaries.')) {
             setChildren(children.filter(c => c.id !== id));
@@ -878,21 +886,13 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             setStorageData('mybookmark_family', profile);
                         }}
                         children={children}
+                        logs={logs}
                         onAddChild={() => {
                             setShowSettings(false);
                             setShowAddChild(true);
                         }}
                         onDeleteChild={deleteChild}
-                        classGroups={classGroups}
-                        onJoinClass={() => {
-                            setShowSettings(false);
-                            setShowJoinClass(true);
-                        }}
-                        onCreateClass={() => {
-                            setShowSettings(false);
-                            setShowCreateClass(true);
-                        }}
-                        onLeaveClass={leaveClassGroup}
+                        onUpdateChild={updateChild}
                         onExport={exportData}
                         onImport={importData}
                         onClose={() => setShowSettings(false)}
@@ -1700,6 +1700,118 @@ function AddChildModal({ onClose, onAdd }) {
                         type="button" 
                         className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
                         onClick={onClose}
+                    >
+                        Cancel
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// Edit Child Modal
+function EditChildModal({ child, onClose, onSave }) {
+    const [name, setName] = useState(child.name || '');
+    const [grade, setGrade] = useState(child.grade || '');
+    const [childType, setChildType] = useState(child.childType || 'student');
+    const [goalMinutes, setGoalMinutes] = useState(child.goal?.minutesPerDay || 20);
+    const [goalDays, setGoalDays] = useState(child.goal?.daysPerWeek || 5);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+
+        onSave({
+            name: name.trim(),
+            grade: grade.trim(),
+            childType,
+            goal: {
+                minutesPerDay: parseInt(goalMinutes) || 20,
+                daysPerWeek: parseInt(goalDays) || 5,
+                isCustom: true
+            }
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-[60]" onClick={onClose}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <h2 className="text-xl font-semibold mb-5 text-gray-800">Edit {child.name}'s Profile</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                        <input
+                            type="text"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
+                        <select
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            value={childType}
+                            onChange={(e) => setChildType(e.target.value)}
+                        >
+                            <option value="baby">👶 Baby (0-18 months)</option>
+                            <option value="toddler">🧒 Toddler (18 mo - 3 years)</option>
+                            <option value="preschool">🎨 Preschool (3-5 years)</option>
+                            <option value="student">🎒 Student (K-12)</option>
+                            <option value="homeschool">🏠 Homeschool Student</option>
+                        </select>
+                    </div>
+
+                    {(childType === 'student' || childType === 'homeschool') && (
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
+                            <input
+                                type="text"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                value={grade}
+                                onChange={(e) => setGrade(e.target.value)}
+                                placeholder="e.g., 2nd, K, 5"
+                            />
+                        </div>
+                    )}
+
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">📖 Daily Reading Goal</label>
+                        <div className="flex gap-3">
+                            <div className="flex-1">
+                                <label className="block text-xs text-gray-500 mb-1">Minutes/day</label>
+                                <input
+                                    type="number"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    value={goalMinutes}
+                                    onChange={(e) => setGoalMinutes(e.target.value)}
+                                    min="1"
+                                    max="120"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs text-gray-500 mb-1">Days/week</label>
+                                <input
+                                    type="number"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    value={goalDays}
+                                    onChange={(e) => setGoalDays(e.target.value)}
+                                    min="1"
+                                    max="7"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
+                        Save Changes
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={onClose}
+                        className="w-full py-2 text-gray-500 text-sm"
                     >
                         Cancel
                     </button>
@@ -4201,13 +4313,11 @@ function OnboardingModal({ onComplete, onSkip }) {
 function SettingsModal({ 
     familyProfile, 
     setFamilyProfile, 
-    children, 
+    children,
+    logs,
     onAddChild, 
-    onDeleteChild, 
-    classGroups,
-    onJoinClass,
-    onCreateClass,
-    onLeaveClass,
+    onDeleteChild,
+    onUpdateChild,
     onExport, 
     onImport, 
     onClose,
@@ -4219,6 +4329,7 @@ function SettingsModal({
     const [importing, setImporting] = useState(false);
     const [editingFamily, setEditingFamily] = useState(false);
     const [familyName, setFamilyName] = useState(familyProfile?.familyName || '');
+    const [editingChild, setEditingChild] = useState(null);
 
     const handleFileSelect = (e) => {
         const file = e.target.files[0];
@@ -4331,22 +4442,6 @@ function SettingsModal({
                                 ➕ Add Child
                             </button>
 
-                            {/* Class Group Actions */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <button 
-                                    onClick={onJoinClass}
-                                    className="py-2 px-3 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium rounded-lg"
-                                >
-                                    👥 Join Class
-                                </button>
-                                <button 
-                                    onClick={onCreateClass}
-                                    className="py-2 px-3 bg-green-50 border border-green-200 text-green-700 text-xs font-medium rounded-lg"
-                                >
-                                    🏫 Create Class
-                                </button>
-                            </div>
-
                             {children.length === 0 ? (
                                 <div className="text-center py-8 text-gray-400">
                                     <div className="text-4xl mb-2">👶</div>
@@ -4355,25 +4450,77 @@ function SettingsModal({
                             ) : (
                                 <div className="space-y-3">
                                     {children.map(child => {
-                                        const childClasses = classGroups.filter(group => 
-                                            group.students.some(s => s.childId === child.id)
-                                        );
+                                        // Calculate stats from logs
+                                        const childLogs = logs.filter(l => l.childId === child.id);
+                                        const totalBooks = new Set(childLogs.map(l => l.bookTitle)).size;
+                                        const totalMinutes = childLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+
+                                        // Find favorite book (most logged)
+                                        const bookCounts = {};
+                                        childLogs.forEach(l => {
+                                            bookCounts[l.bookTitle] = (bookCounts[l.bookTitle] || 0) + 1;
+                                        });
+                                        const favBook = Object.entries(bookCounts).sort((a, b) => b[1] - a[1])[0];
+
+                                        const ageLabels = {
+                                            baby: '👶 Baby',
+                                            toddler: '🧒 Toddler',
+                                            preschool: '🎨 Preschool',
+                                            student: '🎒 Student',
+                                            homeschool: '🏠 Homeschool'
+                                        };
+
                                         return (
                                             <div key={child.id} className="p-4 bg-gray-50 rounded-xl">
-                                                <div className="flex justify-between items-start mb-2">
+                                                <div className="flex justify-between items-start mb-3">
                                                     <div>
-                                                        <div className="font-semibold text-gray-800">{child.name}</div>
-                                                        <div className="text-xs text-gray-500">{child.childType}</div>
+                                                        <div className="font-semibold text-gray-800 text-lg">{child.name}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {ageLabels[child.childType] || child.childType}
+                                                            {child.grade && ` · Grade ${child.grade}`}
+                                                        </div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            if (confirm(`Remove ${child.name}?`)) onDeleteChild(child.id);
-                                                        }}
-                                                        className="text-xs text-red-500 hover:text-red-700"
-                                                    >
-                                                        Remove
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setEditingChild(child)}
+                                                            className="text-xs text-purple-600 hover:text-purple-800 font-medium"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm(`Remove ${child.name}?`)) onDeleteChild(child.id);
+                                                            }}
+                                                            className="text-xs text-red-500 hover:text-red-700"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
                                                 </div>
+
+                                                {/* Reading goal */}
+                                                {child.goal && (
+                                                    <div className="text-xs text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg mb-2">
+                                                        📖 Goal: {child.goal.minutesPerDay} min/day · {child.goal.daysPerWeek} days/week
+                                                    </div>
+                                                )}
+
+                                                {/* Stats */}
+                                                {childLogs.length > 0 && (
+                                                    <div className="flex gap-3 text-xs text-gray-500 mb-2">
+                                                        <span>📚 {totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
+                                                        <span>⏱ {Math.round(totalMinutes / 60)}h {totalMinutes % 60}m total</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Favorite book */}
+                                                {favBook && (
+                                                    <div className="text-xs text-gray-600">
+                                                        ❤️ Most read: <span className="font-medium">{favBook[0]}</span> ({favBook[1]}x)
+                                                    </div>
+                                                )}
+
+                                                {/* Favorite genres */}
                                                 {child.favoriteGenres?.length > 0 && (
                                                     <div className="flex flex-wrap gap-1 mt-2">
                                                         {child.favoriteGenres.slice(0, 3).map(g => (
@@ -4381,21 +4528,22 @@ function SettingsModal({
                                                         ))}
                                                     </div>
                                                 )}
-                                                {childClasses.length > 0 && (
-                                                    <div className="mt-2 pt-2 border-t border-gray-200">
-                                                        <p className="text-xs text-gray-500 mb-1">Classes:</p>
-                                                        {childClasses.map(cls => (
-                                                            <div key={cls.id} className="flex justify-between items-center text-xs">
-                                                                <span>{cls.name}</span>
-                                                                <button onClick={() => onLeaveClass(cls.id, child.id)} className="text-red-500">Leave</button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
                                             </div>
                                         );
                                     })}
                                 </div>
+                            )}
+
+                            {/* Edit Child Modal */}
+                            {editingChild && (
+                                <EditChildModal
+                                    child={editingChild}
+                                    onClose={() => setEditingChild(null)}
+                                    onSave={(updates) => {
+                                        onUpdateChild(editingChild.id, updates);
+                                        setEditingChild(null);
+                                    }}
+                                />
                             )}
                         </div>
                     )}
