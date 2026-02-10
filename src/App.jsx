@@ -157,44 +157,44 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         const loadFromSupabase = async () => {
             try {
                 // Load children
-                const { data: dbChildren, error: childErr } = await supabase
+                const { data: dbChildren } = await supabase
                     .from('children')
                     .select('*')
                     .eq('user_id', user.id);
-                
-                if (childErr) throw childErr;
                 
                 if (dbChildren && dbChildren.length > 0) {
                     const mappedChildren = dbChildren.map(c => ({
                         id: c.id,
                         name: c.name,
                         grade: c.grade || '',
-                        childType: c.child_type || 'student',
+                        childType: c.child_type || c.childType || 'student',
                         goal: {
                             minutesPerDay: c.goal_minutes || 20,
                             daysPerWeek: c.goal_days || 5,
-                            isCustom: c.goal_minutes ? true : false
+                            isCustom: !!c.goal_minutes
                         },
                         milestones: c.milestones || []
                     }));
                     setChildren(mappedChildren);
                     setStorageData('mybookmark_children', mappedChildren);
                 }
+            } catch (err) {
+                console.warn('Error loading children from Supabase:', err);
+            }
 
+            try {
                 // Load reading logs
-                const { data: dbLogs, error: logErr } = await supabase
+                const { data: dbLogs } = await supabase
                     .from('reading_logs')
                     .select('*')
                     .eq('user_id', user.id)
                     .order('date', { ascending: false });
                 
-                if (logErr) throw logErr;
-                
                 if (dbLogs && dbLogs.length > 0) {
                     const mappedLogs = dbLogs.map(l => ({
                         id: l.id,
                         childId: l.child_id,
-                        bookTitle: l.book_title || '',
+                        bookTitle: l.book_title || l.bookTitle || '',
                         author: l.author || '',
                         coverUrl: l.cover_url || '',
                         date: l.date,
@@ -206,7 +206,11 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                     setLogs(mappedLogs);
                     setStorageData('mybookmark_logs', mappedLogs);
                 }
+            } catch (err) {
+                console.warn('Error loading logs from Supabase:', err);
+            }
 
+            try {
                 // Load family profile
                 const { data: dbProfile } = await supabase
                     .from('family_profiles')
@@ -218,10 +222,8 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                     setFamilyProfile(dbProfile.data);
                     setStorageData('mybookmark_family', dbProfile.data);
                 }
-
             } catch (err) {
-                console.error('Error loading from Supabase:', err);
-                // Fall back to localStorage (already loaded)
+                console.warn('Error loading profile from Supabase:', err);
             }
         };
 

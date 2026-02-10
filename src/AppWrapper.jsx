@@ -69,10 +69,6 @@ export default function AppWrapper() {
     try {
       const children = JSON.parse(localStorage.getItem('mybookmark_children') || '[]')
       const logs = JSON.parse(localStorage.getItem('mybookmark_logs') || '[]')
-      const familyProfile = JSON.parse(localStorage.getItem('mybookmark_family') || 'null')
-      const goals = JSON.parse(localStorage.getItem('mybookmark_goals') || '[]')
-      const challenges = JSON.parse(localStorage.getItem('mybookmark_challenges') || '[]')
-      const classGroups = JSON.parse(localStorage.getItem('mybookmark_classgroups') || '[]')
 
       if (children.length === 0 && logs.length === 0) {
         localStorage.setItem('migratedToSupabase', 'true')
@@ -81,120 +77,109 @@ export default function AppWrapper() {
 
       setMigrating(true)
 
-      // 1. Migrate children
-      const childIdMap = {}
+      // Safety timeout — if migration takes more than 15s, skip it
+      const timeout = setTimeout(() => {
+        console.warn('Migration timed out, skipping')
+        setMigrating(false)
+      }, 15000)
 
-      if (children.length > 0) {
-        const childrenToInsert = children.map(child => ({
-          user_id: targetUser.id,
-          name: child.name,
-          grade: child.grade || null,
-          child_type: child.childType || 'student',
-          goal_minutes: child.goal?.minutesPerDay || 20,
-          goal_days: child.goal?.daysPerWeek || 5,
-          milestones: child.milestones || []
-        }))
+      try {
+        const childIdMap = {}
 
-        const { data: insertedChildren, error: childrenError } = await supabase
-          .from('children')
-          .insert(childrenToInsert)
-          .select()
-
-        if (childrenError) throw childrenError
-
-        children.forEach((localChild, index) => {
-          if (insertedChildren[index]) {
-            childIdMap[localChild.id] = insertedChildren[index].id
-          }
-        })
-      }
-
-      // 2. Migrate books (deduplicated)
-      const bookMap = {}
-
-      if (logs.length > 0) {
-        const uniqueBooks = [...new Map(
-          logs.map(log => [`${log.bookTitle}|${log.author || ''}`, log])
-        ).values()]
-
-        for (const log of uniqueBooks) {
-          const bookData = {
-            title: log.bookTitle,
-            author: log.author || null,
-            cover_url: log.coverUrl || null
-          }
-
-          const { data: existingBooks } = await supabase
-            .from('books')
-            .select('id')
-            .eq('title', bookData.title)
-            .limit(1)
-
-          if (existingBooks && existingBooks.length > 0) {
-            bookMap[log.bookTitle] = existingBooks[0].id
-          } else {
-            const { data: newBook, error: bookError } = await supabase
-              .from('books')
-              .insert(bookData)
-              .select()
-              .single()
-
-            if (bookError) {
-              console.warn('Book insert error:', bookError, bookData)
-              continue
-            }
-            bookMap[log.bookTitle] = newBook.id
-          }
-        }
-
-        // 3. Migrate reading logs
-        const logsToInsert = logs
-          .filter(log => childIdMap[log.childId] && bookMap[log.bookTitle])
-          .map(log => ({
+        if (children.length > 0) {
+          const childrenToInsert = children.map(child => ({
             user_id: targetUser.id,
-            child_id: childIdMap[log.childId],
-            book_id: bookMap[log.bookTitle],
-            book_title: log.bookTitle,
-            date: log.date,
-            minutes: log.minutes,
-            notes: log.notes || null,
-            loved: log.loved || false,
-            reading_type: log.readingType || 'independent'
+            name: child.name,
+            grade: child.grade || null,
           }))
 
-        if (logsToInsert.length > 0) {
-          // Insert in batches of 50
-          for (let i = 0; i < logsToInsert.length; i += 50) {
-            const batch = logsToInsert.slice(i, i + 50)
-            const { error: logsError } = await supabase
-              .from('reading_logs')
-              .insert(batch)
+          const { data: insertedChildren, error: childrenError } = await supabase
+            .from('children')
+            .insert(childrenToInsert)
+            .select()
 
-            if (logsError) {
-              console.warn('Logs batch insert error:', logsError)
+          if (!childrenError && insertedChildren) {
+            children.forEach((localChild, index) => {
+              if (insertedChildren[index]) {
+                childIdMap[localChild.id] = insertedChildren[index].id
+              }
+            })
+          } else {
+            console.warn('Children migration error:', childrenError)
+          }
+        }
+
+        if (logs.length > 0) {
+          // Migrate books
+          const bookMap = {}
+          const uniqueBooks = [...new Map(
+            logs.map(log => [`${log.bookTitle}|${log.author || ''}`, log])
+          ).values()]
+
+          for (const log of uniqueBooks) {
+            try {
+              const { data: existingBooks } = await supabase
+                .from('books')
+                .select('id')
+                .eq('title', log.bookTitle)
+                .limit(1)
+
+              if (existingBooks && existingBooks.length > 0) {
+                bookMap[log.bookTitle] = existingBooks[0].id
+              } else {
+                const { data: newBook, error: bookError } = await supabase
+                  .from('books')
+                  .insert({
+                    title: log.bookTitle,
+                    author: log.author || null,
+                    cover_url: log.coverUrl || null
+                  })
+                  .select()
+                  .single()
+
+                if (!bookError && newBook) {
+                  bookMap[log.bookTitle] = newBook.id
+                }
+              }
+            } catch (e) {
+              console.warn('Book insert error:', e)
+            }
+          }
+
+          // Migrate reading logs
+          const logsToInsert = logs
+            .filter(log => childIdMap[log.childId] && bookMap[log.bookTitle])
+            .map(log => ({
+              user_id: targetUser.id,
+              child_id: childIdMap[log.childId],
+              book_id: bookMap[log.bookTitle],
+              date: log.date,
+              minutes: log.minutes,
+            }))
+
+          if (logsToInsert.length > 0) {
+            for (let i = 0; i < logsToInsert.length; i += 50) {
+              const batch = logsToInsert.slice(i, i + 50)
+              const { error: logsError } = await supabase
+                .from('reading_logs')
+                .insert(batch)
+              if (logsError) console.warn('Logs batch error:', logsError)
             }
           }
         }
+      } catch (innerError) {
+        console.warn('Migration inner error:', innerError)
       }
 
-      // 4. Migrate family profile
-      if (familyProfile) {
-        await supabase
-          .from('family_profiles')
-          .upsert({
-            user_id: targetUser.id,
-            family_name: familyProfile.familyName || null,
-            baby_emoji: familyProfile.babyEmoji || '👶',
-            data: familyProfile
-          })
-      }
-
+      clearTimeout(timeout)
       localStorage.setItem('migratedToSupabase', 'true')
       setMigrating(false)
       setShowBanner(false)
 
     } catch (error) {
       console.error('Migration error:', error)
+      // Always recover — don't leave user stuck
+      localStorage.setItem('migratedToSupabase', 'true')
       setMigrating(false)
     }
   }
