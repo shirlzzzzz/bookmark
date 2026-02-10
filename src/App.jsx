@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
 import BookshelfShelves from "./components/BookshelfShelves";
+import Auth from './Auth';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -88,13 +89,13 @@ const fetchBookCover = async (bookTitle) => {
     return null;
   } catch (error) {
     console.error("Error fetching book cover:", error);
-    return null;
+    return null;$
   }
 };
 
 
 // Main App Component
-export default function App() {
+export default function App({ user, onSignOut, onOpenAuth }) {
     // Smart default view: Log tab if setup complete, otherwise show onboarding
     const [currentView, setCurrentView] = useState('log');
     const [children, setChildren] = useState([]);
@@ -122,8 +123,6 @@ export default function App() {
     const [shareCardChild, setShareCardChild] = useState(null);
     const [celebration, setCelebration] = useState(null); // { childName, bookTitle }
     const [error, setError] = useState(null);
-// Auth state
-    const [user, setUser] = useState(null);
     const completeOnboarding = (profile, newChildren) => {
         setFamilyProfile(profile);
         setStorageData('mybookmark_family', profile);
@@ -133,23 +132,9 @@ export default function App() {
         localStorage.setItem('mybookmark_onboarded', 'true');
         setShowOnboarding(false);
     };
-// Auth effect - check session and listen for changes
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
     // Sign out function
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        setUser(null);
+        if (onSignOut) onSignOut();
     };
     useEffect(() => {
         try {
@@ -164,6 +149,84 @@ export default function App() {
             setError('Failed to load data. Your browser storage might be full or corrupted.');
         }
     }, []);
+
+    // Load data from Supabase when user is signed in
+    useEffect(() => {
+        if (!user) return;
+        
+        const loadFromSupabase = async () => {
+            try {
+                // Load children
+                const { data: dbChildren, error: childErr } = await supabase
+                    .from('children')
+                    .select('*')
+                    .eq('user_id', user.id);
+                
+                if (childErr) throw childErr;
+                
+                if (dbChildren && dbChildren.length > 0) {
+                    const mappedChildren = dbChildren.map(c => ({
+                        id: c.id,
+                        name: c.name,
+                        grade: c.grade || '',
+                        childType: c.child_type || 'student',
+                        goal: {
+                            minutesPerDay: c.goal_minutes || 20,
+                            daysPerWeek: c.goal_days || 5,
+                            isCustom: c.goal_minutes ? true : false
+                        },
+                        milestones: c.milestones || []
+                    }));
+                    setChildren(mappedChildren);
+                    setStorageData('mybookmark_children', mappedChildren);
+                }
+
+                // Load reading logs
+                const { data: dbLogs, error: logErr } = await supabase
+                    .from('reading_logs')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('date', { ascending: false });
+                
+                if (logErr) throw logErr;
+                
+                if (dbLogs && dbLogs.length > 0) {
+                    const mappedLogs = dbLogs.map(l => ({
+                        id: l.id,
+                        childId: l.child_id,
+                        bookTitle: l.book_title || '',
+                        author: l.author || '',
+                        coverUrl: l.cover_url || '',
+                        date: l.date,
+                        minutes: l.minutes,
+                        notes: l.notes || '',
+                        loved: l.loved || false,
+                        readingType: l.reading_type || 'independent'
+                    }));
+                    setLogs(mappedLogs);
+                    setStorageData('mybookmark_logs', mappedLogs);
+                }
+
+                // Load family profile
+                const { data: dbProfile } = await supabase
+                    .from('family_profiles')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (dbProfile?.data) {
+                    setFamilyProfile(dbProfile.data);
+                    setStorageData('mybookmark_family', dbProfile.data);
+                }
+
+            } catch (err) {
+                console.error('Error loading from Supabase:', err);
+                // Fall back to localStorage (already loaded)
+            }
+        };
+
+        loadFromSupabase();
+    }, [user]);
 
     useEffect(() => {
         try {
@@ -526,7 +589,15 @@ export default function App() {
                     
                     return (
                         <div className={`bg-gradient-to-br from-purple-600 to-purple-800 text-white ${hasChildren ? 'p-4' : 'p-6'} text-center`}>
-                            <div className="flex justify-end mb-2">
+                            <div className="flex justify-end mb-2 gap-2">
+                                {!user && (
+                                    <button
+                                        onClick={() => onOpenAuth('signin')}
+                                        className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
+                                    >
+                                        👤 <span className="text-xs">Sign In / Sign Up</span>
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setShowSettings(true)}
                                     className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
@@ -829,7 +900,7 @@ export default function App() {
                         onSignOut={handleSignOut}
                         onSignIn={() => {
                             setShowSettings(false);
-                            window.location.reload(); // This will show the auth banner
+                            onOpenAuth('signin');
                         }}
                     />
                 )}
@@ -1035,8 +1106,9 @@ export default function App() {
                             </button>
                             </div>
                         </div>
-                    </div>
+                  </div>
                 )}
+
             </div>
         </div>
     );
@@ -1045,18 +1117,18 @@ export default function App() {
 // Log View Component
 function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, familyProfile }) {
     const babyEmoji = familyProfile?.babyEmoji || '👶';
-    
+
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
                 <div className="text-6xl mb-4">{babyEmoji}</div>
                 <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
                 <p className="text-sm text-gray-400">
-                    Set up your family in{' '}
+                    Set up your family in
                     <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
                         Settings
                     </button>
-                    {' '}to start logging reading
+                    to start logging reading
                 </p>
             </div>
         );
@@ -4190,12 +4262,6 @@ function SettingsModal({
                     >
                         Kids
                     </button>
-                    <button
-                        onClick={() => setActiveTab('data')}
-                        className={`py-3 text-sm font-medium text-center ${activeTab === 'data' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
-                    >
-                        Data
-                   </button>
                    <button
                        onClick={() => setActiveTab('account')}
                         className={`py-3 text-sm font-medium text-center ${activeTab === 'account' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
@@ -4376,52 +4442,6 @@ function SettingsModal({
                                     </p>
                                 </div>
                             )}
-                        </div>
-                    )}
-                    {activeTab === 'data' && (
-                        <div className="space-y-4">
-                            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <p className="text-xs text-yellow-800">
-                                    💡 <strong>Tip:</strong> Export your data regularly to prevent data loss. Your data is stored locally in your browser.
-                                </p>
-                            </div>
-
-                            <button
-                                onClick={onExport}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700"
-                            >
-                                📤 Export Backup
-                            </button>
-
-                            {!importing ? (
-                                <button
-                                    onClick={() => setImporting(true)}
-                                    className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700"
-                                >
-                                    📥 Import Backup
-                                </button>
-                            ) : (
-                                <div className="space-y-2">
-                                    <input
-                                        type="file"
-                                        accept=".json"
-                                        onChange={handleFileSelect}
-                                        className="w-full p-2 border border-green-300 rounded-lg text-sm"
-                                    />
-                                    <button
-                                        onClick={() => setImporting(false)}
-                                        className="w-full py-2 text-gray-600 text-sm"
-                                    >
-                                        Cancel
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="pt-4 border-t">
-                                <p className="text-xs text-gray-400 text-center">
-                                    Data is stored in your browser's local storage.
-                                </p>
-                            </div>
                         </div>
                     )}
                 </div>
