@@ -151,6 +151,44 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         }
     }, []);
 
+    // Fix orphaned logs — reassign logs with unmatched childIds to first child
+    const orphanFixRan = React.useRef(false);
+    
+    const fixOrphanedLogs = (currentChildren, currentLogs) => {
+        if (currentChildren.length === 0 || currentLogs.length === 0) return currentLogs;
+        const childIds = new Set(currentChildren.map(c => c.id));
+        const hasOrphans = currentLogs.some(l => !childIds.has(l.childId));
+        if (hasOrphans) {
+            const firstChildId = currentChildren[0].id;
+            return currentLogs.map(l => 
+                childIds.has(l.childId) ? l : { ...l, childId: firstChildId }
+            );
+        }
+        return currentLogs;
+    };
+
+    // Run orphan fix whenever children or logs change
+    useEffect(() => {
+        if (children.length === 0 || logs.length === 0) return;
+        if (orphanFixRan.current) return;
+        const childIds = new Set(children.map(c => c.id));
+        const hasOrphans = logs.some(l => !childIds.has(l.childId));
+        if (hasOrphans) {
+            orphanFixRan.current = true;
+            const firstChildId = children[0].id;
+            const fixed = logs.map(l => 
+                childIds.has(l.childId) ? l : { ...l, childId: firstChildId }
+            );
+            setLogs(fixed);
+            setStorageData('mybookmark_logs', fixed);
+        }
+    }, [children, logs]);
+
+    // Reset orphan fix flag when children IDs change (e.g., Supabase load)
+    useEffect(() => {
+        orphanFixRan.current = false;
+    }, [children.map(c => c.id).join(',')]);
+
     // Load data from Supabase when user is signed in
     useEffect(() => {
         if (!user) return;
@@ -273,7 +311,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         }
     }, [classGroups]);
 
-    const addChild = (name, grade, childType) => {
+    const addChild = async (name, grade, childType) => {
         // Validation
         if (!name || name.trim().length === 0) {
             setError('Child name is required');
@@ -298,6 +336,22 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             },
             milestones: []
         };
+
+        // Write to Supabase if signed in
+        if (user) {
+            try {
+                const { data, error: sbError } = await supabase
+                    .from('children')
+                    .insert({ user_id: user.id, name: newChild.name, grade: newChild.grade })
+                    .select()
+                    .single();
+                if (data) {
+                    newChild.id = data.id; // Use Supabase ID
+                }
+                if (sbError) console.warn('Supabase addChild error:', sbError);
+            } catch (e) { console.warn('Supabase addChild error:', e); }
+        }
+
         setChildren([...children, newChild]);
         setShowAddChild(false);
         setError(null);
@@ -326,7 +380,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         }
     };
 
-    const addLog = (childId, bookTitle, minutes, date, subject, genre, coverUrl) => {
+    const addLog = async (childId, bookTitle, minutes, date, subject, genre, coverUrl) => {
         // Validation
         if (!childId) {
             setError('Please select a child');
@@ -359,6 +413,49 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             genre: genre || null,
             coverUrl: coverUrl || null
         };
+
+        // Write to Supabase if signed in
+        if (user) {
+            try {
+                // Upsert book
+                let bookId = null;
+                const bookTitleClean = bookTitle.trim().split(' by ')[0];
+                const authorClean = bookTitle.trim().includes(' by ') ? bookTitle.trim().split(' by ').slice(1).join(' by ') : null;
+
+                const { data: existingBook } = await supabase
+                    .from('books')
+                    .select('id')
+                    .eq('title', bookTitleClean)
+                    .limit(1);
+
+                if (existingBook && existingBook.length > 0) {
+                    bookId = existingBook[0].id;
+                } else {
+                    const { data: newBook } = await supabase
+                        .from('books')
+                        .insert({ title: bookTitleClean, author: authorClean, cover_url: coverUrl })
+                        .select()
+                        .single();
+                    if (newBook) bookId = newBook.id;
+                }
+
+                const { data: sbLog, error: logError } = await supabase
+                    .from('reading_logs')
+                    .insert({
+                        user_id: user.id,
+                        child_id: childId,
+                        book_id: bookId,
+                        date: newLog.date,
+                        minutes: newLog.minutes,
+                    })
+                    .select()
+                    .single();
+
+                if (sbLog) newLog.id = sbLog.id;
+                if (logError) console.warn('Supabase addLog error:', logError);
+            } catch (e) { console.warn('Supabase addLog error:', e); }
+        }
+
         setLogs([newLog, ...logs]);
         setShowAddLog(false);
         setError(null);
@@ -778,8 +875,6 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         <BookshelfView 
                             children={children}
                             logs={logs}
-                            selectedChild={selectedChild}
-                            onSelectChild={setSelectedChild}
                             onOpenSettings={() => setShowSettings(true)}
                             familyProfile={familyProfile}
                         />
@@ -1187,7 +1282,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
                                             <div>
-                                                <div className="font-semibold text-gray-800">{child?.name || 'Unknown'}</div>
+                                                <div className="font-semibold text-gray-800">{child?.name || children[0]?.name || 'Unknown'}</div>
                                                 <div className="text-xs text-gray-500">{formatDate(log.date)}</div>
                                             </div>
                                             <button 
@@ -1325,7 +1420,7 @@ function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog,
                                 )}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start">
-                                        <div className="font-medium text-sm text-gray-800">{child?.name || 'Unknown'}</div>
+                                        <div className="font-medium text-sm text-gray-800">{child?.name || children[0]?.name || 'Unknown'}</div>
                                         <button 
                                             onClick={() => onDeleteLog(log.id)}
                                             className="text-xs text-red-500 hover:text-red-700 px-1 py-1"
@@ -1468,6 +1563,59 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
             { title: 'The Notebook of Doom', author: 'Troy Cummings', cover: 'https://covers.openlibrary.org/b/isbn/9780545493239-L.jpg' },
             { title: 'Big Nate', author: 'Lincoln Peirce', cover: 'https://covers.openlibrary.org/b/isbn/9780061944345-L.jpg' },
             { title: 'Amulet: The Stonekeeper', author: 'Kazu Kibuishi', cover: 'https://covers.openlibrary.org/b/isbn/9780439846813-L.jpg' },
+            { title: 'The One and Only Bob', author: 'Katherine Applegate', cover: 'https://covers.openlibrary.org/b/isbn/9780062991317-L.jpg' },
+            { title: 'Front Desk', author: 'Kelly Yang', cover: 'https://covers.openlibrary.org/b/isbn/9781338157826-L.jpg' },
+        ],
+        caldecott: [
+            { title: 'The Snowy Day', author: 'Ezra Jack Keats', cover: 'https://covers.openlibrary.org/b/isbn/9780670654000-L.jpg' },
+            { title: 'Where the Wild Things Are', author: 'Maurice Sendak', cover: 'https://covers.openlibrary.org/b/isbn/9780060254926-L.jpg' },
+            { title: 'Owl Moon', author: 'Jane Yolen', cover: 'https://covers.openlibrary.org/b/isbn/9780399214578-L.jpg' },
+            { title: 'Officer Buckle and Gloria', author: 'Peggy Rathmann', cover: 'https://covers.openlibrary.org/b/isbn/9780399226168-L.jpg' },
+            { title: 'Kitten\'s First Full Moon', author: 'Kevin Henkes', cover: 'https://covers.openlibrary.org/b/isbn/9780060588281-L.jpg' },
+            { title: 'A Ball for Daisy', author: 'Chris Raschka', cover: 'https://covers.openlibrary.org/b/isbn/9780375858611-L.jpg' },
+            { title: 'Last Stop on Market Street', author: 'Matt de la Peña', cover: 'https://covers.openlibrary.org/b/isbn/9780399257742-L.jpg' },
+            { title: 'The Lion & the Mouse', author: 'Jerry Pinkney', cover: 'https://covers.openlibrary.org/b/isbn/9780316013567-L.jpg' },
+        ],
+        newbery: [
+            { title: 'The Giver', author: 'Lois Lowry', cover: 'https://covers.openlibrary.org/b/isbn/9780544336261-L.jpg' },
+            { title: 'Holes', author: 'Louis Sachar', cover: 'https://covers.openlibrary.org/b/isbn/9780374332662-L.jpg' },
+            { title: 'Bridge to Terabithia', author: 'Katherine Paterson', cover: 'https://covers.openlibrary.org/b/isbn/9780064401845-L.jpg' },
+            { title: 'Number the Stars', author: 'Lois Lowry', cover: 'https://covers.openlibrary.org/b/isbn/9780395510605-L.jpg' },
+            { title: 'Walk Two Moons', author: 'Sharon Creech', cover: 'https://covers.openlibrary.org/b/isbn/9780064405171-L.jpg' },
+            { title: 'When You Reach Me', author: 'Rebecca Stead', cover: 'https://covers.openlibrary.org/b/isbn/9780385737494-L.jpg' },
+            { title: 'The Crossover', author: 'Kwame Alexander', cover: 'https://covers.openlibrary.org/b/isbn/9780544107717-L.jpg' },
+            { title: 'Merci Suárez Changes Gears', author: 'Meg Medina', cover: 'https://covers.openlibrary.org/b/isbn/9780763690496-L.jpg' },
+        ],
+        corettascottking: [
+            { title: 'Brown Girl Dreaming', author: 'Jacqueline Woodson', cover: 'https://covers.openlibrary.org/b/isbn/9780399252518-L.jpg' },
+            { title: 'The Watsons Go to Birmingham', author: 'Christopher Paul Curtis', cover: 'https://covers.openlibrary.org/b/isbn/9780440414124-L.jpg' },
+            { title: 'Roll of Thunder, Hear My Cry', author: 'Mildred D. Taylor', cover: 'https://covers.openlibrary.org/b/isbn/9780140384512-L.jpg' },
+            { title: 'Bud, Not Buddy', author: 'Christopher Paul Curtis', cover: 'https://covers.openlibrary.org/b/isbn/9780553494105-L.jpg' },
+            { title: 'One Crazy Summer', author: 'Rita Williams-Garcia', cover: 'https://covers.openlibrary.org/b/isbn/9780060760908-L.jpg' },
+            { title: 'New Kid', author: 'Jerry Craft', cover: 'https://covers.openlibrary.org/b/isbn/9780062691194-L.jpg' },
+            { title: 'The Parker Inheritance', author: 'Varian Johnson', cover: 'https://covers.openlibrary.org/b/isbn/9780545952781-L.jpg' },
+        ],
+        stem: [
+            { title: 'Rosie Revere, Engineer', author: 'Andrea Beaty', cover: 'https://covers.openlibrary.org/b/isbn/9781419708459-L.jpg' },
+            { title: 'Ada Twist, Scientist', author: 'Andrea Beaty', cover: 'https://covers.openlibrary.org/b/isbn/9781419721373-L.jpg' },
+            { title: 'The Most Magnificent Thing', author: 'Ashley Spires', cover: 'https://covers.openlibrary.org/b/isbn/9781554537044-L.jpg' },
+            { title: 'Hidden Figures', author: 'Margot Lee Shetterly', cover: 'https://covers.openlibrary.org/b/isbn/9780062742469-L.jpg' },
+            { title: 'What Do You Do with an Idea?', author: 'Kobi Yamada', cover: 'https://covers.openlibrary.org/b/isbn/9781938298073-L.jpg' },
+            { title: 'The Boy Who Harnessed the Wind', author: 'William Kamkwamba', cover: 'https://covers.openlibrary.org/b/isbn/9780803735118-L.jpg' },
+            { title: 'If You Decide to Go to the Moon', author: 'Faith McNulty', cover: 'https://covers.openlibrary.org/b/isbn/9780590483599-L.jpg' },
+            { title: 'On a Beam of Light', author: 'Jennifer Berne', cover: 'https://covers.openlibrary.org/b/isbn/9780811872355-L.jpg' },
+        ],
+        classics: [
+            { title: 'Charlotte\'s Web', author: 'E.B. White', cover: 'https://covers.openlibrary.org/b/isbn/9780064400558-L.jpg' },
+            { title: 'Where the Sidewalk Ends', author: 'Shel Silverstein', cover: 'https://covers.openlibrary.org/b/isbn/9780060256678-L.jpg' },
+            { title: 'The Phantom Tollbooth', author: 'Norton Juster', cover: 'https://covers.openlibrary.org/b/isbn/9780394820378-L.jpg' },
+            { title: 'A Wrinkle in Time', author: 'Madeleine L\'Engle', cover: 'https://covers.openlibrary.org/b/isbn/9780374386139-L.jpg' },
+            { title: 'The Secret Garden', author: 'Frances Hodgson Burnett', cover: 'https://covers.openlibrary.org/b/isbn/9780064401883-L.jpg' },
+            { title: 'James and the Giant Peach', author: 'Roald Dahl', cover: 'https://covers.openlibrary.org/b/isbn/9780142410363-L.jpg' },
+            { title: 'Matilda', author: 'Roald Dahl', cover: 'https://covers.openlibrary.org/b/isbn/9780142410370-L.jpg' },
+            { title: 'The BFG', author: 'Roald Dahl', cover: 'https://covers.openlibrary.org/b/isbn/9780142410387-L.jpg' },
+            { title: 'Stuart Little', author: 'E.B. White', cover: 'https://covers.openlibrary.org/b/isbn/9780064400565-L.jpg' },
+            { title: 'The Cricket in Times Square', author: 'George Selden', cover: 'https://covers.openlibrary.org/b/isbn/9780312380038-L.jpg' },
         ],
     };
 
@@ -1602,6 +1750,39 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                         books={CURATED_BOOKS.bestsellers} 
                         title="🔥 Popular Right Now"
                         subtitle="Kids' bestsellers & trending reads"
+                    />
+
+                    {/* Award Winners */}
+                    <BookRow 
+                        books={CURATED_BOOKS.caldecott} 
+                        title="🏅 Caldecott Medal Winners"
+                        subtitle="Best illustrated picture books"
+                    />
+
+                    <BookRow 
+                        books={CURATED_BOOKS.newbery} 
+                        title="🥇 Newbery Medal Winners"
+                        subtitle="Outstanding children's literature"
+                    />
+
+                    <BookRow 
+                        books={CURATED_BOOKS.corettascottking} 
+                        title="✊ Coretta Scott King Award"
+                        subtitle="Celebrating African American authors & illustrators"
+                    />
+
+                    {/* STEM */}
+                    <BookRow 
+                        books={CURATED_BOOKS.stem} 
+                        title="🔬 STEM & Science"
+                        subtitle="Inspire curiosity and discovery"
+                    />
+
+                    {/* Classics */}
+                    <BookRow 
+                        books={CURATED_BOOKS.classics} 
+                        title="📖 Timeless Classics"
+                        subtitle="Books every kid should read"
                     />
 
                     {/* By Age Group */}
@@ -1850,7 +2031,9 @@ function ProgressView({ children, logs, selectedChild, onSelectChild, updateChil
 }
 
 // Bookshelf View Component - Visual grid of all books read
-function BookshelfView({ children, logs, selectedChild, onSelectChild, onOpenSettings, familyProfile }) {
+function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
+    const [bookshelfChild, setBookshelfChild] = useState('all');
+
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
@@ -1867,9 +2050,9 @@ function BookshelfView({ children, logs, selectedChild, onSelectChild, onOpenSet
         );
     }
 
-    const childId = selectedChild || children[0]?.id;
+    const childId = bookshelfChild;
     const child = children.find(c => c.id === childId);
-    const childLogs = logs.filter(l => l.childId === childId);
+    const childLogs = childId === 'all' ? logs : logs.filter(l => l.childId === childId);
     
     // Get unique books with their covers
     const booksMap = new Map();
@@ -1896,25 +2079,26 @@ function BookshelfView({ children, logs, selectedChild, onSelectChild, onOpenSet
         new Date(b.lastRead) - new Date(a.lastRead)
     );
 
+    const displayName = childId === 'all' ? 'Family' : (child?.name || 'Family');
+
     return (
         <div>
-            {children.length > 1 && (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
-                    <select 
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        value={childId}
-                        onChange={(e) => onSelectChild(e.target.value)}
-                    >
-                        {children.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                    </select>
-                </div>
-            )}
+            <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+                <select 
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    value={bookshelfChild}
+                    onChange={(e) => setBookshelfChild(e.target.value)}
+                >
+                    <option value="all">All Children</option>
+                    {children.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
+            </div>
 
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">{child?.name}'s Bookshelf</h2>
+                <h2 className="text-xl font-semibold">{displayName}'s Bookshelf</h2>
                 <span className="text-sm text-gray-500">{books.length} books</span>
             </div>
 
