@@ -97,7 +97,7 @@ const fetchBookCover = async (bookTitle) => {
 // Main App Component
 export default function App({ user, onSignOut, onOpenAuth }) {
     // Smart default view: Log tab if setup complete, otherwise show onboarding
-    const [currentView, setCurrentView] = useState('log');
+    const [currentView, setCurrentView] = useState('discover');
     const [children, setChildren] = useState([]);
     const [logs, setLogs] = useState([]);
     const [challenges, setChallenges] = useState([]); // Keep for read-a-thons
@@ -106,6 +106,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
     const [familyProfile, setFamilyProfile] = useState(null);
     const [showAddChild, setShowAddChild] = useState(false);
     const [showAddLog, setShowAddLog] = useState(false);
+    const [prefillBook, setPrefillBook] = useState(null);
     const [selectedChild, setSelectedChild] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportChild, setReportChild] = useState(null);
@@ -685,23 +686,23 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                 <div className="flex bg-white border-b-2 border-gray-200 sticky top-0 z-10">
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'log' 
+                            currentView === 'discover' 
                                 ? 'text-purple-600 border-b-4 border-purple-600' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
-                        onClick={() => setCurrentView('log')}
+                        onClick={() => setCurrentView('discover')}
                     >
-                        Log
+                        ✨ Discover
                     </button>
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'goals' 
+                            currentView === 'library' 
                                 ? 'text-purple-600 border-b-4 border-purple-600' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
-                        onClick={() => setCurrentView('goals')}
+                        onClick={() => setCurrentView('library')}
                     >
-                        Goals
+                        📚 Library
                     </button>
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
@@ -721,32 +722,36 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         }`}
                         onClick={() => setCurrentView('bookshelf')}
                     >
-                        📚
+                        📖
                     </button>
                 </div>
 
                 {/* Content */}
                 <div className="p-5">
-                    {currentView === 'log' && (
-                        <LogView 
+                    {currentView === 'discover' && (
+                        <DiscoverView 
                             children={children}
-                            logs={logs}
-                            onAddLog={() => setShowAddLog(true)}
-                            onDeleteLog={deleteLog}
-                            onOpenSettings={() => setShowSettings(true)}
+                            onLogBook={(book) => {
+                                setPrefillBook(book);
+                                setShowAddLog(true);
+                            }}
                             familyProfile={familyProfile}
                         />
                     )}
-                    {currentView === 'goals' && (
-                        <GoalsView 
+                    {currentView === 'library' && (
+                        <LibraryView 
                             children={children}
-                            goals={syncs}
                             logs={logs}
+                            goals={syncs}
                             challenges={challenges}
+                            onAddLog={() => setShowAddLog(true)}
+                            onDeleteLog={deleteLog}
                             onCreateGoal={() => setShowCreateSync(true)}
                             onCompleteGoal={completeSync}
                             onDeleteGoal={deleteSync}
                             onOpenSettings={() => setShowSettings(true)}
+                            selectedChild={selectedChild}
+                            onSelectChild={setSelectedChild}
                             familyProfile={familyProfile}
                         />
                     )}
@@ -812,8 +817,9 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                     <AddLogModal 
                         children={children}
                         logs={logs}
-                        onClose={() => setShowAddLog(false)}
+                        onClose={() => { setShowAddLog(false); setPrefillBook(null); }}
                         onAdd={addLog}
+                        prefillBook={prefillBook}
                     />
                 )}
 
@@ -1201,6 +1207,441 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                         );
                     })}
                 </div>
+            )}
+        </div>
+    );
+}
+
+// Library View Component - Combines Log, Goals, and Bookshelf
+function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog, onCreateGoal, onCompleteGoal, onDeleteGoal, onOpenSettings, selectedChild, onSelectChild, familyProfile }) {
+    const [section, setSection] = useState('recent');
+    const babyEmoji = familyProfile?.babyEmoji || '👶';
+
+    if (children.length === 0) {
+        return (
+            <div className="text-center py-16">
+                <div className="text-6xl mb-4">{babyEmoji}</div>
+                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
+                <p className="text-sm text-gray-400">
+                    Set up your family in{' '}
+                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
+                        Settings
+                    </button>
+                    {' '}to start logging reading
+                </p>
+            </div>
+        );
+    }
+
+    const recentLogs = logs.slice(0, 20);
+    const activeGoals = goals.filter(g => !g.completed);
+    const uniqueBooks = [...new Map(logs.map(l => [l.bookTitle, l])).values()];
+
+    // Goals progress for each child
+    const childGoalSummary = children.map(child => {
+        const childGoals = activeGoals.filter(g => g.childId === child.id);
+        return { child, goals: childGoals };
+    }).filter(c => c.goals.length > 0);
+
+    return (
+        <div>
+            {/* Log Reading Button */}
+            <button 
+                className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-4"
+                onClick={onAddLog}
+            >
+                ➕ Log Reading Session
+            </button>
+
+            {/* Active Goals Summary */}
+            {activeGoals.length > 0 && (
+                <div className="mb-5">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-sm font-semibold text-gray-700">🎯 Active Goals</h3>
+                        <button onClick={onCreateGoal} className="text-xs text-purple-600 font-medium">+ New Goal</button>
+                    </div>
+                    <div className="space-y-2">
+                        {activeGoals.slice(0, 3).map(goal => {
+                            const child = children.find(c => c.id === goal.childId);
+                            return (
+                                <div key={goal.id} className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-gray-800 truncate">{goal.name}</div>
+                                        <div className="text-xs text-gray-500">{child?.name}</div>
+                                    </div>
+                                    <div className="flex gap-2 ml-2">
+                                        <button 
+                                            onClick={() => onCompleteGoal(goal.id)}
+                                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium"
+                                        >
+                                            ✓ Done
+                                        </button>
+                                        <button 
+                                            onClick={() => onDeleteGoal(goal.id)}
+                                            className="text-xs text-gray-400 hover:text-red-500"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {activeGoals.length > 3 && (
+                            <p className="text-xs text-gray-400 text-center">+{activeGoals.length - 3} more goals</p>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {activeGoals.length === 0 && (
+                <button 
+                    onClick={onCreateGoal}
+                    className="w-full mb-5 p-3 border-2 border-dashed border-purple-200 rounded-lg text-sm text-purple-600 font-medium hover:bg-purple-50 transition-all"
+                >
+                    🎯 Set a Reading Goal
+                </button>
+            )}
+
+            {/* Recent Sessions */}
+            {recentLogs.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                    <div className="text-5xl mb-3">📖</div>
+                    <p className="text-sm">No reading sessions yet</p>
+                    <p className="text-xs mt-1">Tap "Log Reading Session" to get started!</p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Recent Sessions</h3>
+                    {recentLogs.map(log => {
+                        const child = children.find(c => c.id === log.childId);
+                        return (
+                            <div key={log.id} className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl">
+                                {log.coverUrl ? (
+                                    <img src={log.coverUrl} alt="" className="w-12 h-16 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                                ) : (
+                                    <div className="w-12 h-16 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <span className="text-lg">📖</span>
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start">
+                                        <div className="font-medium text-sm text-gray-800">{child?.name || 'Unknown'}</div>
+                                        <button 
+                                            onClick={() => onDeleteLog(log.id)}
+                                            className="text-xs text-red-500 hover:text-red-700 px-1 py-1"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                    <div className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                                    <div className="text-sm text-gray-600 mb-2 truncate">{log.bookTitle}{log.author ? ` by ${log.author}` : ''}</div>
+                                    <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
+                                        {log.minutes} minutes
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Discover View Component
+function DiscoverView({ children, onLogBook, familyProfile }) {
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [searching, setSearching] = useState(false);
+    const [expandedSection, setExpandedSection] = useState(null);
+
+    // Get current month for seasonal picks
+    const month = new Date().getMonth(); // 0-11
+
+    const getSeasonalTheme = () => {
+        if (month === 0) return { title: '❄️ Winter Reads', key: 'winter' };
+        if (month === 1) return { title: '🖤 Black History Month', key: 'bhm' };
+        if (month === 2) return { title: '🌸 Women\'s History Month', key: 'whm' };
+        if (month === 3) return { title: '🌍 Earth Day Reads', key: 'earth' };
+        if (month === 4 || month === 5) return { title: '☀️ Summer Reading Prep', key: 'summer' };
+        if (month === 6 || month === 7) return { title: '🏖️ Summer Reading', key: 'summer' };
+        if (month === 8) return { title: '📚 Back to School', key: 'backtoschool' };
+        if (month === 9) return { title: '🎃 Fall Favorites', key: 'fall' };
+        if (month === 10) return { title: '🦃 Gratitude & Giving', key: 'gratitude' };
+        return { title: '🎄 Holiday Reading', key: 'holiday' };
+    };
+
+    const seasonal = getSeasonalTheme();
+
+    // Curated book lists
+    const CURATED_BOOKS = {
+        board: [
+            { title: 'Goodnight Moon', author: 'Margaret Wise Brown', cover: 'https://covers.openlibrary.org/b/isbn/9780694003617-L.jpg' },
+            { title: 'Brown Bear, Brown Bear, What Do You See?', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9780805047905-L.jpg' },
+            { title: 'The Very Hungry Caterpillar', author: 'Eric Carle', cover: 'https://covers.openlibrary.org/b/isbn/9780399226908-L.jpg' },
+            { title: 'Dear Zoo', author: 'Rod Campbell', cover: 'https://covers.openlibrary.org/b/isbn/9781416947370-L.jpg' },
+            { title: 'Pat the Bunny', author: 'Dorothy Kunhardt', cover: 'https://covers.openlibrary.org/b/isbn/9780307120007-L.jpg' },
+            { title: 'Moo, Baa, La La La!', author: 'Sandra Boynton', cover: 'https://covers.openlibrary.org/b/isbn/9780671449018-L.jpg' },
+        ],
+        picture: [
+            { title: 'Where the Wild Things Are', author: 'Maurice Sendak', cover: 'https://covers.openlibrary.org/b/isbn/9780060254926-L.jpg' },
+            { title: 'The Snowy Day', author: 'Ezra Jack Keats', cover: 'https://covers.openlibrary.org/b/isbn/9780670654000-L.jpg' },
+            { title: 'Corduroy', author: 'Don Freeman', cover: 'https://covers.openlibrary.org/b/isbn/9780140501735-L.jpg' },
+            { title: 'Dragons Love Tacos', author: 'Adam Rubin', cover: 'https://covers.openlibrary.org/b/isbn/9780803736801-L.jpg' },
+            { title: 'The Day the Crayons Quit', author: 'Drew Daywalt', cover: 'https://covers.openlibrary.org/b/isbn/9780399255373-L.jpg' },
+            { title: 'Last Stop on Market Street', author: 'Matt de la Peña', cover: 'https://covers.openlibrary.org/b/isbn/9780399257742-L.jpg' },
+        ],
+        chapter: [
+            { title: 'Diary of a Wimpy Kid', author: 'Jeff Kinney', cover: 'https://covers.openlibrary.org/b/isbn/9780810993136-L.jpg' },
+            { title: 'Dog Man', author: 'Dav Pilkey', cover: 'https://covers.openlibrary.org/b/isbn/9780545581608-L.jpg' },
+            { title: 'Magic Tree House: Dinosaurs Before Dark', author: 'Mary Pope Osborne', cover: 'https://covers.openlibrary.org/b/isbn/9780679824114-L.jpg' },
+            { title: 'Junie B. Jones and the Stupid Smelly Bus', author: 'Barbara Park', cover: 'https://covers.openlibrary.org/b/isbn/9780679826125-L.jpg' },
+            { title: 'Ivy + Bean', author: 'Annie Barrows', cover: 'https://covers.openlibrary.org/b/isbn/9780811849098-L.jpg' },
+            { title: 'The Bad Guys', author: 'Aaron Blabey', cover: 'https://covers.openlibrary.org/b/isbn/9780545912402-L.jpg' },
+        ],
+        middlegrade: [
+            { title: 'Percy Jackson: The Lightning Thief', author: 'Rick Riordan', cover: 'https://covers.openlibrary.org/b/isbn/9780786838653-L.jpg' },
+            { title: 'Wonder', author: 'R.J. Palacio', cover: 'https://covers.openlibrary.org/b/isbn/9780375869020-L.jpg' },
+            { title: 'Holes', author: 'Louis Sachar', cover: 'https://covers.openlibrary.org/b/isbn/9780374332662-L.jpg' },
+            { title: 'The One and Only Ivan', author: 'Katherine Applegate', cover: 'https://covers.openlibrary.org/b/isbn/9780061992254-L.jpg' },
+            { title: 'New Kid', author: 'Jerry Craft', cover: 'https://covers.openlibrary.org/b/isbn/9780062691194-L.jpg' },
+            { title: 'Hatchet', author: 'Gary Paulsen', cover: 'https://covers.openlibrary.org/b/isbn/9781416936473-L.jpg' },
+        ],
+        seasonal: {
+            bhm: [
+                { title: 'Hidden Figures', author: 'Margot Lee Shetterly', cover: 'https://covers.openlibrary.org/b/isbn/9780062742469-L.jpg' },
+                { title: 'The Story of Ruby Bridges', author: 'Robert Coles', cover: 'https://covers.openlibrary.org/b/isbn/9780439472265-L.jpg' },
+                { title: 'I Am Enough', author: 'Grace Byers', cover: 'https://covers.openlibrary.org/b/isbn/9780062667120-L.jpg' },
+                { title: 'Crown: An Ode to the Fresh Cut', author: 'Derrick Barnes', cover: 'https://covers.openlibrary.org/b/isbn/9781572842243-L.jpg' },
+                { title: 'Each Kindness', author: 'Jacqueline Woodson', cover: 'https://covers.openlibrary.org/b/isbn/9780399246524-L.jpg' },
+                { title: 'Hair Love', author: 'Matthew A. Cherry', cover: 'https://covers.openlibrary.org/b/isbn/9780525553366-L.jpg' },
+            ],
+            whm: [
+                { title: 'She Persisted', author: 'Chelsea Clinton', cover: 'https://covers.openlibrary.org/b/isbn/9781524741723-L.jpg' },
+                { title: 'Rosie Revere, Engineer', author: 'Andrea Beaty', cover: 'https://covers.openlibrary.org/b/isbn/9781419708459-L.jpg' },
+                { title: 'Good Night Stories for Rebel Girls', author: 'Elena Favilli', cover: 'https://covers.openlibrary.org/b/isbn/9780997895810-L.jpg' },
+                { title: 'Ada Twist, Scientist', author: 'Andrea Beaty', cover: 'https://covers.openlibrary.org/b/isbn/9781419721373-L.jpg' },
+            ],
+            summer: [
+                { title: 'The Vanderbeekers of 141st Street', author: 'Karina Yan Glaser', cover: 'https://covers.openlibrary.org/b/isbn/9781328499219-L.jpg' },
+                { title: 'From the Mixed-Up Files', author: 'E.L. Konigsburg', cover: 'https://covers.openlibrary.org/b/isbn/9780689711817-L.jpg' },
+                { title: 'The Lemonade War', author: 'Jacqueline Davies', cover: 'https://covers.openlibrary.org/b/isbn/9780547237657-L.jpg' },
+                { title: 'Frog and Toad Are Friends', author: 'Arnold Lobel', cover: 'https://covers.openlibrary.org/b/isbn/9780064440202-L.jpg' },
+            ],
+            winter: [
+                { title: 'The Snowy Day', author: 'Ezra Jack Keats', cover: 'https://covers.openlibrary.org/b/isbn/9780670654000-L.jpg' },
+                { title: 'Snow', author: 'Uri Shulevitz', cover: 'https://covers.openlibrary.org/b/isbn/9780374468620-L.jpg' },
+                { title: 'The Mitten', author: 'Jan Brett', cover: 'https://covers.openlibrary.org/b/isbn/9780399219207-L.jpg' },
+                { title: 'Owl Moon', author: 'Jane Yolen', cover: 'https://covers.openlibrary.org/b/isbn/9780399214578-L.jpg' },
+            ],
+            backtoschool: [
+                { title: 'The Kissing Hand', author: 'Audrey Penn', cover: 'https://covers.openlibrary.org/b/isbn/9780878685851-L.jpg' },
+                { title: 'First Day Jitters', author: 'Julie Danneberg', cover: 'https://covers.openlibrary.org/b/isbn/9781580890540-L.jpg' },
+                { title: 'The Name Jar', author: 'Yangsook Choi', cover: 'https://covers.openlibrary.org/b/isbn/9780440417996-L.jpg' },
+                { title: 'Enemy Pie', author: 'Derek Munson', cover: 'https://covers.openlibrary.org/b/isbn/9780811827782-L.jpg' },
+            ],
+            fall: [
+                { title: 'Leaf Man', author: 'Lois Ehlert', cover: 'https://covers.openlibrary.org/b/isbn/9780152053048-L.jpg' },
+                { title: 'Fletcher and the Falling Leaves', author: 'Julia Rawlinson', cover: 'https://covers.openlibrary.org/b/isbn/9780061573972-L.jpg' },
+                { title: 'Room on the Broom', author: 'Julia Donaldson', cover: 'https://covers.openlibrary.org/b/isbn/9780142501122-L.jpg' },
+            ],
+            gratitude: [
+                { title: 'Bear Says Thank You', author: 'Karma Wilson', cover: 'https://covers.openlibrary.org/b/isbn/9781416928171-L.jpg' },
+                { title: 'Those Shoes', author: 'Maribeth Boelts', cover: 'https://covers.openlibrary.org/b/isbn/9780763642846-L.jpg' },
+                { title: 'The Giving Tree', author: 'Shel Silverstein', cover: 'https://covers.openlibrary.org/b/isbn/9780060256654-L.jpg' },
+            ],
+            holiday: [
+                { title: 'The Polar Express', author: 'Chris Van Allsburg', cover: 'https://covers.openlibrary.org/b/isbn/9780395389492-L.jpg' },
+                { title: 'How the Grinch Stole Christmas', author: 'Dr. Seuss', cover: 'https://covers.openlibrary.org/b/isbn/9780394800790-L.jpg' },
+                { title: 'The Night Before Christmas', author: 'Clement C. Moore', cover: 'https://covers.openlibrary.org/b/isbn/9780385376716-L.jpg' },
+            ],
+            earth: [
+                { title: 'The Lorax', author: 'Dr. Seuss', cover: 'https://covers.openlibrary.org/b/isbn/9780394823379-L.jpg' },
+                { title: 'The Watcher', author: 'Jeanette Winter', cover: 'https://covers.openlibrary.org/b/isbn/9780375867743-L.jpg' },
+                { title: 'We Are Water Protectors', author: 'Carole Lindstrom', cover: 'https://covers.openlibrary.org/b/isbn/9781250203557-L.jpg' },
+            ],
+        },
+        bestsellers: [
+            { title: 'Cat Kid Comic Club', author: 'Dav Pilkey', cover: 'https://covers.openlibrary.org/b/isbn/9781338712766-L.jpg' },
+            { title: 'The Wild Robot', author: 'Peter Brown', cover: 'https://covers.openlibrary.org/b/isbn/9780316381994-L.jpg' },
+            { title: 'Wings of Fire: The Dragonet Prophecy', author: 'Tui T. Sutherland', cover: 'https://covers.openlibrary.org/b/isbn/9780545349185-L.jpg' },
+            { title: 'The Notebook of Doom', author: 'Troy Cummings', cover: 'https://covers.openlibrary.org/b/isbn/9780545493239-L.jpg' },
+            { title: 'Big Nate', author: 'Lincoln Peirce', cover: 'https://covers.openlibrary.org/b/isbn/9780061944345-L.jpg' },
+            { title: 'Amulet: The Stonekeeper', author: 'Kazu Kibuishi', cover: 'https://covers.openlibrary.org/b/isbn/9780439846813-L.jpg' },
+        ],
+    };
+
+    const seasonalBooks = CURATED_BOOKS.seasonal[seasonal.key] || CURATED_BOOKS.seasonal.summer;
+
+    // Google Books search
+    const searchGoogleBooks = async (query) => {
+        if (!query.trim()) return;
+        setSearching(true);
+        try {
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&orderBy=relevance`);
+            const data = await res.json();
+            if (data.items) {
+                setSearchResults(data.items.map(item => ({
+                    title: item.volumeInfo?.title || 'Unknown',
+                    author: item.volumeInfo?.authors?.[0] || '',
+                    cover: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+                    description: item.volumeInfo?.description?.slice(0, 120) || '',
+                })));
+            } else {
+                setSearchResults([]);
+            }
+        } catch (err) {
+            console.warn('Google Books search error:', err);
+            setSearchResults([]);
+        }
+        setSearching(false);
+    };
+
+    const BookCard = ({ book, size = 'normal' }) => (
+        <div className={size === 'small' ? 'w-28 flex-shrink-0' : ''}>
+            {book.cover ? (
+                <img 
+                    src={book.cover} 
+                    alt={book.title}
+                    className={`${size === 'small' ? 'w-28 h-40' : 'w-full h-44'} object-contain rounded-lg shadow-md mb-1.5 bg-gray-50`}
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+            ) : null}
+            <div 
+                className={`${size === 'small' ? 'w-28 h-40' : 'w-full h-44'} bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg shadow-md mb-1.5 items-center justify-center`}
+                style={{ display: book.cover ? 'none' : 'flex' }}
+            >
+                <span className="text-2xl">📖</span>
+            </div>
+            <p className={`${size === 'small' ? 'text-xs w-28' : 'text-xs'} text-gray-700 font-medium truncate`}>{book.title}</p>
+            <p className={`${size === 'small' ? 'text-xs w-28' : 'text-xs'} text-gray-400 truncate`}>{book.author}</p>
+            <button 
+                onClick={() => onLogBook({ title: book.title, author: book.author, cover: book.cover })}
+                className="mt-1 text-xs text-purple-600 font-medium hover:text-purple-800"
+            >
+                + Log this
+            </button>
+        </div>
+    );
+
+    const BookRow = ({ books, title, subtitle }) => (
+        <div className="mb-6">
+            <div className="flex justify-between items-baseline mb-3">
+                <div>
+                    <h3 className="text-base font-semibold text-gray-800">{title}</h3>
+                    {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+                </div>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                {books.map((book, i) => (
+                    <BookCard key={i} book={book} size="small" />
+                ))}
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            {/* Search */}
+            <div className="mb-6">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        placeholder="Search for any book..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && searchGoogleBooks(searchQuery)}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <button
+                        onClick={() => searchGoogleBooks(searchQuery)}
+                        className="px-4 py-3 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                    >
+                        🔍
+                    </button>
+                </div>
+            </div>
+
+            {/* Search Results */}
+            {searching && (
+                <div className="text-center py-8">
+                    <div className="text-2xl animate-pulse">📚</div>
+                    <p className="text-sm text-gray-500 mt-2">Searching...</p>
+                </div>
+            )}
+
+            {searchResults.length > 0 && (
+                <div className="mb-6">
+                    <h3 className="text-base font-semibold text-gray-800 mb-3">Search Results</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        {searchResults.map((book, i) => (
+                            <BookCard key={i} book={book} />
+                        ))}
+                    </div>
+                    <button 
+                        onClick={() => { setSearchResults([]); setSearchQuery(''); }}
+                        className="w-full mt-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                    >
+                        Clear results
+                    </button>
+                </div>
+            )}
+
+            {/* Curated Sections (shown when not searching) */}
+            {searchResults.length === 0 && !searching && (
+                <>
+                    {/* Seasonal Picks */}
+                    <BookRow 
+                        books={seasonalBooks} 
+                        title={seasonal.title}
+                        subtitle="Timely picks for your family"
+                    />
+
+                    {/* Bestsellers & New */}
+                    <BookRow 
+                        books={CURATED_BOOKS.bestsellers} 
+                        title="🔥 Popular Right Now"
+                        subtitle="Kids' bestsellers & trending reads"
+                    />
+
+                    {/* By Age Group */}
+                    <div className="mb-6">
+                        <h3 className="text-base font-semibold text-gray-800 mb-1">📖 Books by Age</h3>
+                        <p className="text-xs text-gray-500 mb-3">Tap to explore</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { key: 'board', label: '👶 Board Books', sub: '0-2 years' },
+                                { key: 'picture', label: '🎨 Picture Books', sub: '2-6 years' },
+                                { key: 'chapter', label: '📕 Chapter Books', sub: '6-9 years' },
+                                { key: 'middlegrade', label: '📚 Middle Grade', sub: '9-12 years' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
+                                    className={`p-3 rounded-xl text-left transition-all ${
+                                        expandedSection === cat.key 
+                                            ? 'bg-purple-100 border-2 border-purple-300' 
+                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                                    <div className="text-xs text-gray-500">{cat.sub}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Expanded age section */}
+                    {expandedSection && CURATED_BOOKS[expandedSection] && (
+                        <div className="mb-6">
+                            <div className="grid grid-cols-3 gap-3">
+                                {CURATED_BOOKS[expandedSection].map((book, i) => (
+                                    <BookCard key={i} book={book} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
@@ -1844,9 +2285,9 @@ const getRecommendation = (grade) => {
 };
 
 // Add Log Modal
-function AddLogModal({ children, logs, onClose, onAdd }) {
+function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     const [selectedChildId, setSelectedChildId] = useState(children[0]?.id || '');
-    const [bookTitle, setBookTitle] = useState('');
+    const [bookTitle, setBookTitle] = useState(prefillBook?.title || '');
     const [minutes, setMinutes] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [suggestions, setSuggestions] = useState([]);
@@ -1854,7 +2295,7 @@ function AddLogModal({ children, logs, onClose, onAdd }) {
     const [isSearching, setIsSearching] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [voiceError, setVoiceError] = useState('');
-    const [coverUrl, setCoverUrl] = useState(null);
+    const [coverUrl, setCoverUrl] = useState(prefillBook?.cover || null);
     const [coverLoading, setCoverLoading] = useState(false);
     const [chapterProgress, setChapterProgress] = useState(''); // e.g., "Chapter 5" or "50%"
 
