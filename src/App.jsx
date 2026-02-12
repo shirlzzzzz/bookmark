@@ -1,4 +1,4 @@
-// MyBookmark App
+// OurBookmark App
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
@@ -626,7 +626,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `mybookmark-backup-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `ourbookmark-backup-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -672,7 +672,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             return true;
         } catch (err) {
             console.error('Import error:', err);
-            setError('Failed to import data. Please make sure you selected a valid MyBookmark backup file.');
+            setError('Failed to import data. Please make sure you selected a valid OurBookmark backup file.');
             return false;
         }
     };
@@ -732,9 +732,9 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                 /* Full header for new users */
                                 <div>
                                     <h1 className="text-2xl font-semibold mb-2">
-                                        📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'My Bookmark'}
+                                        📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'OurBookmark'}
                                     </h1>
-                                    <p className="text-sm opacity-90 mb-2">From first board books to chapter books and beyond, My Bookmark helps families track reading and bookmark the moments that matter.</p>
+                                    <p className="text-sm opacity-90 mb-2">From first board books to chapter books and beyond, OurBookmark helps families track reading and bookmark the moments that matter.</p>
                                     <p className="text-xs opacity-75">Log reading in seconds, track progress for every child from the very first book through middle school, and generate school-ready reports when you need them.</p>
                                 </div>
                             )}
@@ -897,7 +897,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             FAQ
                         </button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3">© 2026 My Bookmark</p>
+                    <p className="text-xs text-gray-400 mt-3">© 2026 OurBookmark</p>
                 </div>
 
                 {/* Modals */}
@@ -1013,7 +1013,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={() => setShowAbout(false)}>
                         <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-between items-center p-6 pb-4 border-b sticky top-0 bg-white">
-                                <h2 className="text-xl font-semibold text-gray-800">About My Bookmark</h2>
+                                <h2 className="text-xl font-semibold text-gray-800">About OurBookmark</h2>
                                 <button onClick={() => setShowAbout(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
                             </div>
                             <div className="p-6 pt-4 overflow-y-auto">
@@ -1042,14 +1042,14 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             {/* Who It's For */}
                             <div className="mb-8">
                                 <h3 className="text-lg font-semibold text-purple-700 mb-3">👨‍👩‍👧‍👦 Who It's For</h3>
-                                <p className="text-gray-600 mb-3">Built for families first. My Bookmark works whether your child is:</p>
+                                <p className="text-gray-600 mb-3">Built for families first. OurBookmark works whether your child is:</p>
                                 <ul className="text-sm text-gray-600 space-y-2 ml-4">
                                     <li>• A baby listening to their first books</li>
                                     <li>• A preschooler enjoying read-alouds</li>
                                     <li>• A K–8 student reading independently</li>
                                     <li>• Homeschooled, in school, or somewhere in between</li>
                                 </ul>
-                                <p className="text-sm text-gray-500 mt-3 italic">Teachers and schools can use My Bookmark too—but families never need school adoption to get value.</p>
+                                <p className="text-sm text-gray-500 mt-3 italic">Teachers and schools can use OurBookmark too—but families never need school adoption to get value.</p>
                             </div>
                             
                             {/* Key Features */}
@@ -1094,18 +1094,18 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                     
                                     <div className="space-y-4">
                                         <div>
-                                            <h4 className="font-medium text-gray-800">What is My Bookmark?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">My Bookmark is a parent-focused reading tracker that helps families log reading, track progress across multiple children, and generate school-ready reports. It works from the very first read-aloud through independent reading and beyond.</p>
+                                            <h4 className="font-medium text-gray-800">What is OurBookmark?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">OurBookmark is a parent-focused reading tracker that helps families log reading, track progress across multiple children, and generate school-ready reports. It works from the very first read-aloud through independent reading and beyond.</p>
                                         </div>
                                         
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Who is My Bookmark for?</h4>
+                                            <h4 className="font-medium text-gray-800">Who is OurBookmark for?</h4>
                                             <p className="text-sm text-gray-600 mt-1">Parents of babies, toddlers, and school-age kids. Families with multiple children. Homeschool families and co-ops. Parents participating in school reading programs. Teachers and schools can use it too, but families never need school adoption to get value.</p>
                                         </div>
                                         
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Do I need a school or teacher to use My Bookmark?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">No. My Bookmark is fully usable on its own by families. Teachers, classrooms, or schools can optionally participate for challenges or reporting, but it's never required.</p>
+                                            <h4 className="font-medium text-gray-800">Do I need a school or teacher to use OurBookmark?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">No. OurBookmark is fully usable on its own by families. Teachers, classrooms, or schools can optionally participate for challenges or reporting, but it's never required.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1127,12 +1127,12 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                         
                                         <div>
                                             <h4 className="font-medium text-gray-800">Can I track multiple children?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Yes. My Bookmark supports unlimited children per household, always. There are no per-child fees.</p>
+                                            <p className="text-sm text-gray-600 mt-1">Yes. OurBookmark supports unlimited children per household, always. There are no per-child fees.</p>
                                         </div>
                                         
                                         <div>
                                             <h4 className="font-medium text-gray-800">Can kids log reading themselves?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">My Bookmark is parent-controlled by design. Older children can participate with supervision, but parents always manage the account, data, and sharing.</p>
+                                            <p className="text-sm text-gray-600 mt-1">OurBookmark is parent-controlled by design. Older children can participate with supervision, but parents always manage the account, data, and sharing.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1144,7 +1144,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                     <div className="space-y-4">
                                         <div>
                                             <h4 className="font-medium text-gray-800">Can I generate reports for school or homeschool records?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Yes. My Bookmark generates clean, school-ready PDF and CSV reports for teachers, homeschool documentation, reading challenges, and read-a-thons.</p>
+                                            <p className="text-sm text-gray-600 mt-1">Yes. OurBookmark generates clean, school-ready PDF and CSV reports for teachers, homeschool documentation, reading challenges, and read-a-thons.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1155,13 +1155,13 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                     
                                     <div className="space-y-4">
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Can teachers use My Bookmark?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Yes. Teachers can create optional class groups, track participation, and run reading challenges. Families can join classes if they choose, but don't need a teacher to use My Bookmark.</p>
+                                            <h4 className="font-medium text-gray-800">Can teachers use OurBookmark?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">Yes. Teachers can create optional class groups, track participation, and run reading challenges. Families can join classes if they choose, but don't need a teacher to use OurBookmark.</p>
                                         </div>
                                         
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Can PTAs, co-ops, or schools use My Bookmark?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Yes. My Bookmark can be used for classroom challenges, school-wide read-a-thons, homeschool co-ops, and community reading programs.</p>
+                                            <h4 className="font-medium text-gray-800">Can PTAs, co-ops, or schools use OurBookmark?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">Yes. OurBookmark can be used for classroom challenges, school-wide read-a-thons, homeschool co-ops, and community reading programs.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1172,13 +1172,13 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                     
                                     <div className="space-y-4">
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Is My Bookmark privacy-friendly?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Yes. Privacy is core to how My Bookmark is built. No ads, no selling personal data, parents control what is shared, and children never create independent accounts.</p>
+                                            <h4 className="font-medium text-gray-800">Is OurBookmark privacy-friendly?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">Yes. Privacy is core to how OurBookmark is built. No ads, no selling personal data, parents control what is shared, and children never create independent accounts.</p>
                                         </div>
                                         
                                         <div>
                                             <h4 className="font-medium text-gray-800">Do you collect personal data about children?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">My Bookmark collects only what's necessary to provide the service, such as reading activity entered by parents. We do not sell data or use it for advertising. Parents remain in control at all times.</p>
+                                            <p className="text-sm text-gray-600 mt-1">OurBookmark collects only what's necessary to provide the service, such as reading activity entered by parents. We do not sell data or use it for advertising. Parents remain in control at all times.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1194,8 +1194,8 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                         </div>
                                         
                                         <div>
-                                            <h4 className="font-medium text-gray-800">What devices does My Bookmark work on?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">My Bookmark is a web app that works on phones, tablets, and computers. No download required.</p>
+                                            <h4 className="font-medium text-gray-800">What devices does OurBookmark work on?</h4>
+                                            <p className="text-sm text-gray-600 mt-1">OurBookmark is a web app that works on phones, tablets, and computers. No download required.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -4666,7 +4666,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {step === 1 && (
                     <div className="text-center">
                         <div className="text-5xl mb-4">🔖</div>
-                        <h2 className="text-2xl font-bold text-purple-800 mb-4">The My Bookmark Story</h2>
+                        <h2 className="text-2xl font-bold text-purple-800 mb-4">The OurBookmark Story</h2>
                         
                         <div className="text-gray-600 space-y-3 text-left mb-6">
                             <p className="font-medium text-gray-800">Every family has a reading story.</p>
@@ -4677,7 +4677,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                                 It's a journey worth remembering.
                             </p>
                             <p>
-                                My Bookmark helps you mark every moment,
+                                OurBookmark helps you mark every moment,
                                 track every page, and bookmark the memories that matter.
                             </p>
                         </div>
@@ -5459,7 +5459,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                     >
                         <div className="text-center mb-4">
                             <div className="text-2xl mb-1">🔖</div>
-                            <div className="text-xs opacity-75 uppercase tracking-wider">My Bookmark</div>
+                            <div className="text-xs opacity-75 uppercase tracking-wider">OurBookmark</div>
                         </div>
                         
                         <div className="text-center mb-4">
@@ -5517,7 +5517,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                     >
                         <div className="text-center mb-4">
                             <div className="text-2xl mb-1">🔖</div>
-                            <div className="text-xs opacity-75 uppercase tracking-wider">My Bookmark</div>
+                            <div className="text-xs opacity-75 uppercase tracking-wider">OurBookmark</div>
                         </div>
                         
                         <div className="text-center mb-4">

@@ -186,7 +186,15 @@ export default function AppWrapper() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    localStorage.removeItem('mybookmark_children')
+    localStorage.removeItem('mybookmark_logs')
+    localStorage.removeItem('mybookmark_challenges')
+    localStorage.removeItem('mybookmark_goals')
+    localStorage.removeItem('mybookmark_classgroups')
+    localStorage.removeItem('mybookmark_family')
+    localStorage.removeItem('migratedToSupabase')
     setUser(null)
+    window.location.reload()
   }
 
   if (loading) {
@@ -194,7 +202,7 @@ export default function AppWrapper() {
       <div className="flex justify-center items-center h-screen" style={{ fontFamily: 'system-ui, sans-serif' }}>
         <div className="text-center">
           <div className="text-4xl mb-4">📚</div>
-          <p className="text-gray-500">Loading My Bookmark...</p>
+          <p className="text-gray-500">Loading OurBookmark...</p>
         </div>
       </div>
     )
