@@ -107,6 +107,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
     const [showAddChild, setShowAddChild] = useState(false);
     const [showAddLog, setShowAddLog] = useState(false);
     const [prefillBook, setPrefillBook] = useState(null);
+    const [homeLibrary, setHomeLibrary] = useState([]);
     const [selectedChild, setSelectedChild] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportChild, setReportChild] = useState(null);
@@ -145,6 +146,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             setSyncs(getStorageData('mybookmark_goals', []));
             setClassGroups(getStorageData('mybookmark_classgroups', []));
             setFamilyProfile(getStorageData('mybookmark_family', null));
+            setHomeLibrary(getStorageData('mybookmark_homelibrary', []));
         } catch (err) {
             console.error('Error loading data:', err);
             setError('Failed to load data. Your browser storage might be full or corrupted.');
@@ -310,6 +312,30 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             console.error('Error saving class groups:', err);
         }
     }, [classGroups]);
+
+    useEffect(() => {
+        try {
+            setStorageData('mybookmark_homelibrary', homeLibrary);
+        } catch (err) {
+            console.error('Error saving home library:', err);
+        }
+    }, [homeLibrary]);
+
+    const addToHomeLibrary = (book) => {
+        // book = { title, author, coverUrl }
+        if (homeLibrary.some(b => b.title === book.title)) return; // no dupes
+        setHomeLibrary([...homeLibrary, { 
+            id: Date.now().toString(),
+            title: book.title, 
+            author: book.author || '', 
+            coverUrl: book.coverUrl || book.cover || null,
+            addedDate: new Date().toISOString().split('T')[0]
+        }]);
+    };
+
+    const removeFromHomeLibrary = (bookId) => {
+        setHomeLibrary(homeLibrary.filter(b => b.id !== bookId));
+    };
 
     const addChild = async (name, grade, childType) => {
         // Validation
@@ -809,7 +835,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         }`}
                         onClick={() => setCurrentView('progress')}
                     >
-                        Progress
+                        📊 Progress
                     </button>
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
@@ -819,7 +845,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         }`}
                         onClick={() => setCurrentView('bookshelf')}
                     >
-                        📖
+                        📖 Shelf
                     </button>
                 </div>
 
@@ -856,17 +882,6 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         <ProgressView 
                             children={children}
                             logs={logs}
-                            selectedChild={selectedChild}
-                            onSelectChild={setSelectedChild}
-                            updateChildGoal={updateChildGoal}
-                            onGenerateReport={(child) => {
-                                setReportChild(child);
-                                setShowReportModal(true);
-                            }}
-                            onShareCard={(child) => {
-                                setShareCardChild(child);
-                                setShowShareCard(true);
-                            }}
                             onOpenSettings={() => setShowSettings(true)}
                             familyProfile={familyProfile}
                         />
@@ -877,6 +892,13 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             logs={logs}
                             onOpenSettings={() => setShowSettings(true)}
                             familyProfile={familyProfile}
+                            homeLibrary={homeLibrary}
+                            onAddToHomeLibrary={addToHomeLibrary}
+                            onRemoveFromHomeLibrary={removeFromHomeLibrary}
+                            onLogBook={(book) => {
+                                setPrefillBook(book);
+                                setShowAddLog(true);
+                            }}
                         />
                     )}
                 </div>
@@ -1829,14 +1851,11 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
 }
 
 // Progress View Component
-function ProgressView({ children, logs, selectedChild, onSelectChild, updateChildGoal, onGenerateReport, onShareCard, onOpenSettings, familyProfile }) {
-    const [showEditGoal, setShowEditGoal] = useState(false);
-    const babyEmoji = familyProfile?.babyEmoji || '👶';
-
+function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
-                <div className="text-6xl mb-4">{babyEmoji}</div>
+                <div className="text-6xl mb-4">📊</div>
                 <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
                 <p className="text-sm text-gray-400">
                     Set up your family in{' '}
@@ -1849,190 +1868,282 @@ function ProgressView({ children, logs, selectedChild, onSelectChild, updateChil
         );
     }
 
-    const childId = selectedChild || children[0]?.id;
-    const child = children.find(c => c.id === childId);
-    const childLogs = logs.filter(l => l.childId === childId);
+    // Use all logs (no multi-child selector per spec)
+    const allLogs = logs;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
 
-    // Calculate stats
+    // === THIS WEEK STATS ===
     const weekStart = getWeekStart();
-    const weekLogs = childLogs.filter(l => new Date(l.date) >= weekStart);
-    const weekMinutes = weekLogs.reduce((sum, l) => sum + l.minutes, 0);
-    const daysReadThisWeek = new Set(weekLogs.map(l => l.date)).size;
+    const weekLogs = allLogs.filter(l => new Date(l.date) >= weekStart);
+    const weekBooks = new Set(weekLogs.map(l => (l.bookTitle || '').split(' by ')[0])).size;
+    const weekMinutes = weekLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+    const weekHours = Math.floor(weekMinutes / 60);
+    const weekRemainMin = weekMinutes % 60;
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    const monthLogs = childLogs.filter(l => new Date(l.date) >= monthStart);
-    const monthMinutes = monthLogs.reduce((sum, l) => sum + l.minutes, 0);
+    // === READING STREAK (calendar) ===
+    const daysWithReading = new Set(allLogs.map(l => l.date));
+    
+    // Get this week's days (Sun-Sat)
+    const weekDays = [];
+    const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        weekDays.push({
+            label: dayLabels[i],
+            date: dateStr,
+            hasReading: daysWithReading.has(dateStr),
+            isToday: dateStr === todayStr,
+            isPast: d <= today
+        });
+    }
 
-    const totalBooks = new Set(childLogs.map(l => l.bookTitle)).size;
-    const totalMinutes = childLogs.reduce((sum, l) => sum + l.minutes, 0);
+    const daysReadThisWeek = weekDays.filter(d => d.hasReading).length;
 
-    // Goal tracking
-    const goal = child?.goal || { minutesPerDay: 20, daysPerWeek: 5 };
-    const weeklyGoalMinutes = goal.minutesPerDay * goal.daysPerWeek;
-    const goalProgress = Math.min(100, Math.round((weekMinutes / weeklyGoalMinutes) * 100));
-    const isOnTrack = weekMinutes >= weeklyGoalMinutes;
-    const minutesNeeded = Math.max(0, weeklyGoalMinutes - weekMinutes);
-    const daysNeeded = Math.max(0, goal.daysPerWeek - daysReadThisWeek);
+    // Calculate streak (consecutive days ending today or yesterday)
+    let streak = 0;
+    const checkDate = new Date(today);
+    // Start from today, go backwards
+    while (true) {
+        const ds = checkDate.toISOString().split('T')[0];
+        if (daysWithReading.has(ds)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        } else if (streak === 0) {
+            // If today has no reading, check from yesterday
+            checkDate.setDate(checkDate.getDate() - 1);
+            const ys = checkDate.toISOString().split('T')[0];
+            if (daysWithReading.has(ys)) {
+                streak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    // === MILESTONES ===
+    const totalBooksRead = new Set(allLogs.map(l => (l.bookTitle || '').split(' by ')[0])).size;
+    const totalMinutes = allLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+    
+    const milestones = [];
+    
+    // First book logged
+    if (allLogs.length > 0) {
+        const firstLog = [...allLogs].sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+        const firstTitle = (firstLog.bookTitle || '').split(' by ')[0];
+        milestones.push({ icon: '📖', text: `First Book Logged! "${firstTitle}"` });
+    }
+    
+    // Book milestones
+    if (totalBooksRead >= 50) milestones.push({ icon: '🏆', text: `50 Books Read!` });
+    else if (totalBooksRead >= 25) milestones.push({ icon: '⭐', text: `25 Books Read!` });
+    else if (totalBooksRead >= 10) milestones.push({ icon: '🎉', text: `10 Books Read!` });
+    else if (totalBooksRead >= 5) milestones.push({ icon: '📚', text: `5 Books Read!` });
+    
+    // Time milestones
+    if (totalMinutes >= 600) milestones.push({ icon: '⏰', text: `10 Hours of Reading!` });
+    else if (totalMinutes >= 300) milestones.push({ icon: '⏰', text: `5 Hours of Reading!` });
+    else if (totalMinutes >= 60) milestones.push({ icon: '⏰', text: `1 Hour of Reading!` });
+
+    // Streak milestone
+    if (streak >= 7) milestones.push({ icon: '🔥', text: `Reading Streak: ${streak} days in a row!` });
+    else if (streak >= 3) milestones.push({ icon: '🔥', text: `Reading Streak: ${streak} days in a row!` });
+
+    // === MOST READ AUTHORS ===
+    const authorCounts = {};
+    allLogs.forEach(l => {
+        const parts = (l.bookTitle || '').split(' by ');
+        if (parts.length > 1) {
+            const author = parts.slice(1).join(' by ').trim();
+            if (author) {
+                const bookTitle = parts[0].trim();
+                if (!authorCounts[author]) authorCounts[author] = new Set();
+                authorCounts[author].add(bookTitle);
+            }
+        }
+    });
+    const topAuthors = Object.entries(authorCounts)
+        .map(([name, books]) => ({ name, count: books.size }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    const authorMedals = ['🥇', '🥈', '🥉'];
+
+    // === READING TIME TRENDS (last 4 weeks) ===
+    const weeklyData = [];
+    for (let w = 3; w >= 0; w--) {
+        const ws = new Date(weekStart);
+        ws.setDate(ws.getDate() - (w * 7));
+        const we = new Date(ws);
+        we.setDate(we.getDate() + 7);
+        const mins = allLogs
+            .filter(l => { const d = new Date(l.date); return d >= ws && d < we; })
+            .reduce((sum, l) => sum + (l.minutes || 0), 0);
+        weeklyData.push({ label: w === 0 ? 'This Week' : `${w} wk ago`, minutes: mins });
+    }
+    const maxWeekMin = Math.max(...weeklyData.map(w => w.minutes), 1);
 
     return (
         <div>
-            {children.length > 1 && (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
-                    <select 
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        value={childId}
-                        onChange={(e) => onSelectChild(e.target.value)}
-                    >
-                        {children.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
+            {/* 1. MILESTONES */}
+            {milestones.length > 0 && (
+                <div className="mb-5 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-amber-800 mb-3">🎉 Milestones</h3>
+                    <div className="space-y-2">
+                        {milestones.map((m, i) => (
+                            <div key={i} className="flex items-start gap-2">
+                                <span className="text-lg">{m.icon}</span>
+                                <span className="text-sm text-amber-900 font-medium">{m.text}</span>
+                            </div>
                         ))}
-                    </select>
+                    </div>
                 </div>
             )}
 
-            <h2 className="text-xl font-semibold mb-4">{child?.name}'s Progress</h2>
-
-            {/* Weekly Goal Progress */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 mb-5">
-                <div className="flex items-start justify-between mb-3">
-                    <div>
-                        <div className="text-sm font-semibold text-purple-900 mb-1">
-                            📖 Weekly Reading Goal
-                        </div>
-                        <div className="text-xs text-purple-700">
-                            {goal.minutesPerDay} min/day • {goal.daysPerWeek} days/week
-                            {!goal.isCustom && child?.grade && (
-                                <span className="ml-1">(Recommended for {child.grade})</span>
-                            )}
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => setShowEditGoal(true)}
-                        className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                    >
-                        Edit Goal
-                    </button>
+            {/* 2. THIS WEEK */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 text-white text-center">
+                    <div className="text-3xl font-bold">{weekBooks}</div>
+                    <div className="text-xs font-medium opacity-85 mt-1">Books Read</div>
                 </div>
+                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 text-white text-center">
+                    <div className="text-3xl font-bold">
+                        {weekHours > 0 ? `${weekHours}h ${weekRemainMin}m` : `${weekMinutes}m`}
+                    </div>
+                    <div className="text-xs font-medium opacity-85 mt-1">Total Time</div>
+                </div>
+            </div>
 
-                {/* Progress Bar */}
-                <div className="mb-3">
-                    <div className="flex justify-between text-xs text-purple-700 mb-1">
-                        <span>
-                            {weekMinutes === 0 
-                                ? "Let's get started this week 💜" 
-                                : `${weekMinutes} minutes together`}
+            {/* 3. READING STREAK */}
+            <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4">
+                <h3 className="text-base font-semibold text-gray-800">Reading Streak</h3>
+                <p className="text-sm text-gray-500 mb-3">
+                    {daysReadThisWeek > 0 
+                        ? `You've read ${daysReadThisWeek} day${daysReadThisWeek !== 1 ? 's' : ''} this week! 🎉`
+                        : `Start reading to build your streak!`
+                    }
+                </p>
+                <div className="grid grid-cols-7 gap-2">
+                    {weekDays.map((day, i) => (
+                        <div key={i} className="text-center">
+                            <div className="text-xs text-gray-500 font-medium mb-1">{day.label}</div>
+                            <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                                day.hasReading 
+                                    ? 'bg-purple-600 text-white' 
+                                    : day.isPast 
+                                        ? 'bg-gray-100 text-gray-400' 
+                                        : 'bg-gray-50 text-gray-300'
+                            } ${day.isToday ? 'ring-2 ring-green-400 ring-offset-1' : ''}`}>
+                                {day.hasReading ? '✓' : ''}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {streak > 0 && (
+                    <div className="mt-3 text-center">
+                        <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
+                            🔥 {streak} day streak
                         </span>
-                        <span className="font-semibold">{goalProgress}%</span>
-                    </div>
-                    <div className="w-full bg-purple-200 rounded-full h-3 overflow-hidden">
-                        <div 
-                            className={`h-full transition-all duration-500 rounded-full ${
-                                isOnTrack ? 'bg-green-500' : 'bg-purple-600'
-                            }`}
-                            style={{ width: `${goalProgress}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Status Message */}
-                {isOnTrack ? (
-                    <div className="text-sm font-medium text-green-700 flex items-center gap-2">
-                        <span>🎉</span>
-                        <span>You did it! Reading together matters.</span>
-                    </div>
-                ) : (
-                    <div className="text-sm text-purple-800">
-                        {weekMinutes === 0 ? (
-                            <span>Every page counts — even 5 minutes 💜</span>
-                        ) : daysNeeded > 0 ? (
-                            <span>One short story today keeps the streak alive! ✨</span>
-                        ) : minutesNeeded > 0 ? (
-                            <span>Almost there — you're building something beautiful 📚</span>
-                        ) : (
-                            <span>Keep going!</span>
-                        )}
                     </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-1">{daysReadThisWeek}</div>
-                    <div className="text-xs text-gray-600 uppercase tracking-wide">Days This Week</div>
-                </div>
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-1">{monthMinutes}</div>
-                    <div className="text-xs text-gray-600 uppercase tracking-wide">Minutes This Month</div>
-                </div>
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-1">{totalBooks}</div>
-                    <div className="text-xs text-gray-600 uppercase tracking-wide">Unique Books</div>
-                </div>
-                <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-purple-600 mb-1">{totalMinutes}</div>
-                    <div className="text-xs text-gray-600 uppercase tracking-wide">Total Minutes</div>
-                </div>
-            </div>
-
-            {childLogs.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                    <div className="text-6xl mb-4">📖</div>
-                    <h3 className="text-lg text-gray-600 mb-2">No reading logged yet</h3>
-                    <p className="text-sm">Go to Log Reading to add sessions</p>
-                </div>
-            ) : (
-                <div>
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold">Reading History</h3>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => onShareCard(child)}
-                                className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-medium rounded-lg hover:bg-purple-200 transition-all"
-                            >
-                                📤 Share
-                            </button>
-                            <button
-                                onClick={() => onGenerateReport(child)}
-                                className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-all"
-                            >
-                                📄 Report
-                            </button>
-                        </div>
-                    </div>
-                    {childLogs.slice(0, 10).map(log => (
-                        <div key={log.id} className="bg-white border border-gray-200 rounded-xl p-4 mb-3 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start">
-                                <div className="font-medium text-gray-800">{log.bookTitle}</div>
-                                <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
-                                    {log.minutes}m
-                                </span>
+            {/* 4. MOST READ AUTHORS */}
+            {topAuthors.length > 0 && (
+                <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4">
+                    <h3 className="text-base font-semibold text-gray-800 mb-3">Most Read Authors</h3>
+                    <div className="space-y-2">
+                        {topAuthors.map((author, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="text-lg w-6 text-center">{authorMedals[i] || '📖'}</span>
+                                <span className="text-sm font-medium text-gray-800 flex-1">{author.name}</span>
+                                <span className="text-xs text-gray-500">{author.count} book{author.count !== 1 ? 's' : ''}</span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">{formatDate(log.date)}</div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* 5. READING TIME TRENDS */}
+            <div className="mb-5 bg-white border border-gray-200 rounded-xl p-4">
+                <h3 className="text-base font-semibold text-gray-800">Reading Time Trends</h3>
+                <p className="text-sm text-gray-500 mb-4">Minutes read per week</p>
+                <div className="flex items-end gap-3 h-32">
+                    {weeklyData.map((week, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center">
+                            <div className="text-xs text-gray-600 font-semibold mb-1">
+                                {week.minutes > 0 ? `${week.minutes}m` : ''}
+                            </div>
+                            <div 
+                                className="w-full rounded-t-md bg-gradient-to-t from-purple-600 to-purple-400 transition-all"
+                                style={{ 
+                                    height: `${Math.max((week.minutes / maxWeekMin) * 100, week.minutes > 0 ? 8 : 2)}%`,
+                                    minHeight: week.minutes > 0 ? '12px' : '3px'
+                                }}
+                            />
+                            <div className="text-xs text-gray-500 mt-2 text-center leading-tight">
+                                {week.label}
+                            </div>
                         </div>
                     ))}
                 </div>
-            )}
+            </div>
 
-            {/* Edit Goal Modal */}
-            {showEditGoal && (
-                <EditGoalModal
-                    child={child}
-                    onClose={() => setShowEditGoal(false)}
-                    onSave={(newGoal) => {
-                        updateChildGoal(child.id, newGoal);
-                        setShowEditGoal(false);
-                    }}
-                />
-            )}
+            {/* Total stats summary */}
+            <div className="text-center text-sm text-gray-500 mb-4">
+                <span className="font-medium">{totalBooksRead} books</span> · <span className="font-medium">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m</span> total reading time
+            </div>
         </div>
     );
 }
 
-// Bookshelf View Component - Visual grid of all books read
-function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
+
+
+
+// Bookshelf View Component - Visual grid of all books read + Home Library
+function BookshelfView({ children, logs, onOpenSettings, familyProfile, homeLibrary, onAddToHomeLibrary, onRemoveFromHomeLibrary, onLogBook }) {
     const [bookshelfChild, setBookshelfChild] = useState('all');
+    const [showAddToLib, setShowAddToLib] = useState(false);
+    const [libSearchQuery, setLibSearchQuery] = useState('');
+    const [libSearchResults, setLibSearchResults] = useState([]);
+    const [libSearching, setLibSearching] = useState(false);
+    const [miniLog, setMiniLog] = useState(null); // { title, author, coverUrl }
+    const [miniLogChild, setMiniLogChild] = useState(children[0]?.id || '');
+    const [miniLogMinutes, setMiniLogMinutes] = useState('10');
+
+    const searchBooksForLib = async (query) => {
+        if (!query.trim()) return;
+        setLibSearching(true);
+        try {
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&printType=books`);
+            const data = await res.json();
+            if (data.items) {
+                setLibSearchResults(data.items.map(item => ({
+                    title: item.volumeInfo?.title || 'Unknown',
+                    author: item.volumeInfo?.authors?.[0] || '',
+                    coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+                })));
+            } else {
+                setLibSearchResults([]);
+            }
+        } catch (err) {
+            setLibSearchResults([]);
+        }
+        setLibSearching(false);
+    };
+
+    const handleQuickLog = () => {
+        if (!miniLog || !miniLogChild) return;
+        const bookTitle = miniLog.author 
+            ? `${miniLog.title} by ${miniLog.author}` 
+            : miniLog.title;
+        onLogBook({ title: bookTitle, author: miniLog.author, cover: miniLog.coverUrl });
+        setMiniLog(null);
+    };
 
     if (children.length === 0) {
         return (
@@ -2081,8 +2192,91 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
 
     const displayName = childId === 'all' ? 'Family' : (child?.name || 'Family');
 
+    // Get read counts for home library books
+    const getReadCount = (bookTitle) => {
+        return logs.filter(l => {
+            const logTitle = (l.bookTitle || '').split(' by ')[0].toLowerCase().trim();
+            return logTitle === bookTitle.toLowerCase().trim();
+        }).length;
+    };
+
     return (
         <div>
+            {/* ===== OUR BOOKS — Home Library (only if has books or first time prompt) ===== */}
+            {homeLibrary.length > 0 && (
+                <div className="bg-purple-50 -mx-5 -mt-5 px-5 pt-4 pb-4 mb-4 border-b border-purple-100">
+                    <div className="flex justify-between items-baseline mb-1">
+                        <h3 className="text-base font-semibold text-gray-800">🏠 Our Books</h3>
+                        <button 
+                            onClick={() => setShowAddToLib(true)}
+                            className="text-xs text-purple-600 font-semibold hover:text-purple-800"
+                        >
+                            + Add
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">Tap to log a reading session</p>
+                    
+                    <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                        {homeLibrary.map((book) => {
+                            const readCount = getReadCount(book.title);
+                            return (
+                                <div 
+                                    key={book.id} 
+                                    className="flex-shrink-0 w-20 text-center cursor-pointer relative"
+                                    onClick={() => {
+                                        setMiniLog(book);
+                                        setMiniLogChild(children[0]?.id || '');
+                                        setMiniLogMinutes('10');
+                                    }}
+                                >
+                                    {readCount > 0 && (
+                                        <span className="absolute top-1 left-1 bg-black bg-opacity-60 text-white text-xs font-bold px-1.5 py-0.5 rounded-full z-10">
+                                            {readCount}×
+                                        </span>
+                                    )}
+                                    <div className="absolute bottom-7 right-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs z-10 border-2 border-white shadow">
+                                        ▶
+                                    </div>
+                                    {book.coverUrl ? (
+                                        <img 
+                                            src={book.coverUrl} 
+                                            alt={book.title}
+                                            className="w-20 h-28 object-cover rounded shadow-md"
+                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                        />
+                                    ) : null}
+                                    <div 
+                                        className="w-20 h-28 bg-gradient-to-br from-purple-100 to-purple-200 rounded shadow-md items-center justify-center"
+                                        style={{ display: book.coverUrl ? 'none' : 'flex' }}
+                                    >
+                                        <span className="text-xl">📖</span>
+                                    </div>
+                                    <p className="text-xs font-medium text-gray-700 mt-1 truncate w-20">{book.title}</p>
+                                </div>
+                            );
+                        })}
+                        <div 
+                            className="flex-shrink-0 w-20 h-28 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all"
+                            onClick={() => setShowAddToLib(true)}
+                        >
+                            <span className="text-xl text-gray-400">+</span>
+                            <span className="text-xs text-gray-400 font-medium">Add</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Prompt to create home library (only when empty, subtle) */}
+            {homeLibrary.length === 0 && (
+                <button 
+                    onClick={() => setShowAddToLib(true)}
+                    className="w-full mb-4 p-3 border-2 border-dashed border-gray-300 rounded-xl text-center hover:border-purple-400 hover:bg-purple-50 transition-all"
+                >
+                    <span className="text-sm text-gray-500">🏠 Add books you own for quick logging</span>
+                </button>
+            )}
+
+            {/* Child Selector */}
             <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
                 <select 
@@ -2110,19 +2304,185 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
                 </div>
             ) : (
                 <div>
-                    
-                    {/* New Bookshelf Shelves */}
                     <BookshelfShelves
-                     childName={child?.name || "your child"}
-                     favorites={books.filter((b) => (b.timesRead || 0) > 1)}
-                     allBooks={books}
-                     onOpenBook={(book) => console.log("Clicked book:", book)}
+                        childName={child?.name || "your child"}
+                        favorites={books.filter((b) => (b.timesRead || 0) > 1)}
+                        allBooks={books}
+                        onOpenBook={(book) => console.log("Clicked book:", book)}
                     />
+                </div>
+            )}
+
+            {/* ===== MINI LOG SHEET ===== */}
+            {miniLog && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMiniLog(null)}>
+                    <div className="absolute inset-0 bg-black bg-opacity-30" />
+                    <div 
+                        className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => setMiniLog(null)}
+                            className="absolute top-3 right-4 text-gray-400 text-lg"
+                        >✕</button>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            {miniLog.coverUrl ? (
+                                <img src={miniLog.coverUrl} alt="" className="w-12 h-16 rounded object-cover shadow" />
+                            ) : (
+                                <div className="w-12 h-16 bg-purple-100 rounded flex items-center justify-center text-lg">📖</div>
+                            )}
+                            <div>
+                                <div className="font-semibold text-base">{miniLog.title}</div>
+                                {miniLog.author && <div className="text-sm text-gray-500">{miniLog.author}</div>}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mb-3">
+                            <select 
+                                value={miniLogChild}
+                                onChange={(e) => setMiniLogChild(e.target.value)}
+                                className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm"
+                            >
+                                {children.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                            <input 
+                                type="number"
+                                value={miniLogMinutes}
+                                onChange={(e) => setMiniLogMinutes(e.target.value)}
+                                className="w-20 p-2.5 border border-gray-300 rounded-lg text-sm text-center"
+                                placeholder="min"
+                            />
+                        </div>
+
+                        <div className="flex gap-2 mb-4">
+                            {[5, 10, 15, 20, 30].map(m => (
+                                <button 
+                                    key={m}
+                                    onClick={() => setMiniLogMinutes(String(m))}
+                                    className={`flex-1 py-2 rounded-full text-xs font-semibold border transition-all ${
+                                        miniLogMinutes === String(m) 
+                                            ? 'bg-purple-100 border-purple-400 text-purple-700' 
+                                            : 'border-gray-200 text-gray-600 hover:border-purple-300'
+                                    }`}
+                                >
+                                    {m} min
+                                </button>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={handleQuickLog}
+                            className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold text-sm hover:bg-purple-700 transition-all"
+                        >
+                            ✅ Log Reading Session
+                        </button>
                     </div>
-                    )}
+                </div>
+            )}
+
+            {/* ===== ADD TO HOME LIBRARY MODAL ===== */}
+            {showAddToLib && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => { setShowAddToLib(false); setLibSearchResults([]); setLibSearchQuery(''); }}>
+                    <div className="absolute inset-0 bg-black bg-opacity-30" />
+                    <div 
+                        className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8 shadow-xl max-h-[80vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button 
+                            onClick={() => { setShowAddToLib(false); setLibSearchResults([]); setLibSearchQuery(''); }}
+                            className="absolute top-3 right-4 text-gray-400 text-lg"
+                        >✕</button>
+
+                        <h3 className="text-lg font-semibold mb-1">Add Books to Your Library</h3>
+                        <p className="text-xs text-gray-500 mb-4">Search for books your family owns</p>
+
+                        <div className="flex gap-2 mb-4">
+                            <input 
+                                type="text"
+                                value={libSearchQuery}
+                                onChange={(e) => setLibSearchQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && searchBooksForLib(libSearchQuery)}
+                                placeholder="Search by title or author..."
+                                className="flex-1 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                autoFocus
+                            />
+                            <button 
+                                onClick={() => searchBooksForLib(libSearchQuery)}
+                                className="px-4 bg-purple-600 text-white rounded-lg text-sm font-medium"
+                            >🔍</button>
+                        </div>
+
+                        {libSearching && (
+                            <div className="text-center py-6">
+                                <div className="text-2xl animate-pulse">📚</div>
+                                <p className="text-sm text-gray-500 mt-2">Searching...</p>
+                            </div>
+                        )}
+
+                        {libSearchResults.length > 0 && (
+                            <div className="space-y-2">
+                                {libSearchResults.map((book, i) => {
+                                    const alreadyAdded = homeLibrary.some(b => b.title === book.title);
+                                    return (
+                                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                                            {book.coverUrl ? (
+                                                <img src={book.coverUrl} alt="" className="w-10 h-14 rounded object-cover flex-shrink-0" />
+                                            ) : (
+                                                <div className="w-10 h-14 bg-purple-100 rounded flex items-center justify-center flex-shrink-0 text-sm">📖</div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-medium truncate">{book.title}</div>
+                                                <div className="text-xs text-gray-500 truncate">{book.author}</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => !alreadyAdded && onAddToHomeLibrary(book)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 ${
+                                                    alreadyAdded 
+                                                        ? 'bg-gray-100 text-gray-400 cursor-default' 
+                                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                                }`}
+                                            >
+                                                {alreadyAdded ? '✓ Added' : '+ Add'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Show current home library for removal */}
+                        {homeLibrary.length > 0 && (
+                            <div className="mt-6">
+                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">In your library</div>
+                                <div className="space-y-1">
+                                    {homeLibrary.map(book => (
+                                        <div key={book.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
+                                            {book.coverUrl ? (
+                                                <img src={book.coverUrl} alt="" className="w-8 h-11 rounded object-cover flex-shrink-0" />
+                                            ) : (
+                                                <div className="w-8 h-11 bg-purple-100 rounded flex items-center justify-center flex-shrink-0 text-xs">📖</div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm font-medium truncate">{book.title}</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => onRemoveFromHomeLibrary(book.id)}
+                                                className="text-xs text-red-500 font-medium hover:text-red-700"
+                                            >Remove</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    );
-                    }
+                </div>
+            )}
+        </div>
+    );
+}
 
 // Kids View Component
 function KidsView({ children, onAddChild, onDeleteChild, classGroups, onJoinClass, onCreateClass, onLeaveClass }) {
