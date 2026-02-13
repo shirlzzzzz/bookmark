@@ -884,6 +884,17 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             logs={logs}
                             onOpenSettings={() => setShowSettings(true)}
                             familyProfile={familyProfile}
+                            selectedChild={selectedChild}
+                            onSelectChild={setSelectedChild}
+                            updateChildGoal={updateChildGoal}
+                            onGenerateReport={(child) => {
+                                setReportChild(child);
+                                setShowReportModal(true);
+                            }}
+                            onShareCard={(child) => {
+                                setShareCardChild(child);
+                                setShowShareCard(true);
+                            }}
                         />
                     )}
                     {currentView === 'bookshelf' && (
@@ -1851,7 +1862,9 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
 }
 
 // Progress View Component
-function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
+function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedChild, onSelectChild, updateChildGoal, onGenerateReport, onShareCard }) {
+    const [showEditGoal, setShowEditGoal] = useState(false);
+
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
@@ -1868,23 +1881,32 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
         );
     }
 
-    // Use all logs (no multi-child selector per spec)
+    const childId = selectedChild || children[0]?.id;
+    const child = children.find(c => c.id === childId);
+    const childLogs = logs.filter(l => l.childId === childId);
     const allLogs = logs;
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // === THIS WEEK STATS ===
+    // === WEEKLY GOAL ===
+    const goal = child?.goal || { minutesPerDay: 20, daysPerWeek: 5 };
     const weekStart = getWeekStart();
-    const weekLogs = allLogs.filter(l => new Date(l.date) >= weekStart);
-    const weekBooks = new Set(weekLogs.map(l => (l.bookTitle || '').split(' by ')[0])).size;
+    const weekLogs = childLogs.filter(l => new Date(l.date) >= weekStart);
     const weekMinutes = weekLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
-    const weekHours = Math.floor(weekMinutes / 60);
-    const weekRemainMin = weekMinutes % 60;
+    const weeklyGoalMinutes = goal.minutesPerDay * goal.daysPerWeek;
+    const goalProgress = Math.min(100, Math.round((weekMinutes / weeklyGoalMinutes) * 100));
+    const daysReadThisWeekChild = new Set(weekLogs.map(l => l.date)).size;
+    const daysNeeded = Math.max(0, goal.daysPerWeek - daysReadThisWeekChild);
+
+    // === THIS WEEK STATS (all children) ===
+    const allWeekLogs = allLogs.filter(l => new Date(l.date) >= weekStart);
+    const weekBooks = new Set(allWeekLogs.map(l => (l.bookTitle || '').split(' by ')[0])).size;
+    const allWeekMinutes = allWeekLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+    const weekHours = Math.floor(allWeekMinutes / 60);
+    const weekRemainMin = allWeekMinutes % 60;
 
     // === READING STREAK (calendar) ===
     const daysWithReading = new Set(allLogs.map(l => l.date));
-    
-    // Get this week's days (Sun-Sat)
     const weekDays = [];
     const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
     for (let i = 0; i < 7; i++) {
@@ -1899,60 +1921,43 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
             isPast: d <= today
         });
     }
-
     const daysReadThisWeek = weekDays.filter(d => d.hasReading).length;
 
-    // Calculate streak (consecutive days ending today or yesterday)
+    // Streak calculation
     let streak = 0;
     const checkDate = new Date(today);
-    // Start from today, go backwards
     while (true) {
         const ds = checkDate.toISOString().split('T')[0];
         if (daysWithReading.has(ds)) {
             streak++;
             checkDate.setDate(checkDate.getDate() - 1);
         } else if (streak === 0) {
-            // If today has no reading, check from yesterday
             checkDate.setDate(checkDate.getDate() - 1);
             const ys = checkDate.toISOString().split('T')[0];
             if (daysWithReading.has(ys)) {
                 streak++;
                 checkDate.setDate(checkDate.getDate() - 1);
-            } else {
-                break;
-            }
-        } else {
-            break;
-        }
+            } else { break; }
+        } else { break; }
     }
 
     // === MILESTONES ===
     const totalBooksRead = new Set(allLogs.map(l => (l.bookTitle || '').split(' by ')[0])).size;
     const totalMinutes = allLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
-    
     const milestones = [];
-    
-    // First book logged
     if (allLogs.length > 0) {
         const firstLog = [...allLogs].sort((a, b) => new Date(a.date) - new Date(b.date))[0];
         const firstTitle = (firstLog.bookTitle || '').split(' by ')[0];
         milestones.push({ icon: '📖', text: `First Book Logged! "${firstTitle}"` });
     }
-    
-    // Book milestones
-    if (totalBooksRead >= 50) milestones.push({ icon: '🏆', text: `50 Books Read!` });
-    else if (totalBooksRead >= 25) milestones.push({ icon: '⭐', text: `25 Books Read!` });
-    else if (totalBooksRead >= 10) milestones.push({ icon: '🎉', text: `10 Books Read!` });
-    else if (totalBooksRead >= 5) milestones.push({ icon: '📚', text: `5 Books Read!` });
-    
-    // Time milestones
-    if (totalMinutes >= 600) milestones.push({ icon: '⏰', text: `10 Hours of Reading!` });
-    else if (totalMinutes >= 300) milestones.push({ icon: '⏰', text: `5 Hours of Reading!` });
-    else if (totalMinutes >= 60) milestones.push({ icon: '⏰', text: `1 Hour of Reading!` });
-
-    // Streak milestone
-    if (streak >= 7) milestones.push({ icon: '🔥', text: `Reading Streak: ${streak} days in a row!` });
-    else if (streak >= 3) milestones.push({ icon: '🔥', text: `Reading Streak: ${streak} days in a row!` });
+    if (totalBooksRead >= 50) milestones.push({ icon: '🏆', text: '50 Books Read!' });
+    else if (totalBooksRead >= 25) milestones.push({ icon: '⭐', text: '25 Books Read!' });
+    else if (totalBooksRead >= 10) milestones.push({ icon: '🎉', text: '10 Books Read!' });
+    else if (totalBooksRead >= 5) milestones.push({ icon: '📚', text: '5 Books Read!' });
+    if (totalMinutes >= 600) milestones.push({ icon: '⏰', text: '10 Hours of Reading!' });
+    else if (totalMinutes >= 300) milestones.push({ icon: '⏰', text: '5 Hours of Reading!' });
+    else if (totalMinutes >= 60) milestones.push({ icon: '⏰', text: '1 Hour of Reading!' });
+    if (streak >= 3) milestones.push({ icon: '🔥', text: `Reading Streak: ${streak} days in a row!` });
 
     // === MOST READ AUTHORS ===
     const authorCounts = {};
@@ -1973,7 +1978,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
         .slice(0, 5);
     const authorMedals = ['🥇', '🥈', '🥉'];
 
-    // === READING TIME TRENDS (last 4 weeks) ===
+    // === READING TIME TRENDS ===
     const weeklyData = [];
     for (let w = 3; w >= 0; w--) {
         const ws = new Date(weekStart);
@@ -1989,6 +1994,54 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
 
     return (
         <div>
+            {/* CHILD SELECTOR */}
+            {children.length > 1 && (
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+                    <select 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        value={childId}
+                        onChange={(e) => onSelectChild(e.target.value)}
+                    >
+                        {children.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            <h2 className="text-xl font-semibold mb-4">{child?.name}'s Progress</h2>
+
+            {/* WEEKLY READING GOAL */}
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 mb-5">
+                <div className="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 className="font-semibold text-gray-800">📖 Weekly Reading Goal</h3>
+                        <p className="text-sm text-purple-600">{goal.minutesPerDay} min/day · {goal.daysPerWeek} days/week</p>
+                    </div>
+                    <button 
+                        onClick={() => setShowEditGoal(true)}
+                        className="text-sm text-purple-600 font-medium hover:text-purple-800"
+                    >Edit Goal</button>
+                </div>
+                <div className="flex justify-between text-sm text-purple-700 mb-1">
+                    <span>{weekMinutes} of {weeklyGoalMinutes} minutes</span>
+                    <span>{goalProgress}%</span>
+                </div>
+                <div className="w-full bg-purple-200 rounded-full h-3 mb-2">
+                    <div 
+                        className="bg-purple-600 rounded-full h-3 transition-all"
+                        style={{ width: `${goalProgress}%` }}
+                    />
+                </div>
+                <p className="text-sm text-purple-700">
+                    {goalProgress >= 100 
+                        ? '🎉 Goal reached! Amazing job!' 
+                        : `Read ${daysNeeded} more day${daysNeeded !== 1 ? 's' : ''} this week`
+                    }
+                </p>
+            </div>
+
             {/* 1. MILESTONES */}
             {milestones.length > 0 && (
                 <div className="mb-5 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4">
@@ -2012,7 +2065,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
                 </div>
                 <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 text-white text-center">
                     <div className="text-3xl font-bold">
-                        {weekHours > 0 ? `${weekHours}h ${weekRemainMin}m` : `${weekMinutes}m`}
+                        {weekHours > 0 ? `${weekHours}h ${weekRemainMin}m` : `${allWeekMinutes}m`}
                     </div>
                     <div className="text-xs font-medium opacity-85 mt-1">Total Time</div>
                 </div>
@@ -2024,14 +2077,14 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
                 <p className="text-sm text-gray-500 mb-3">
                     {daysReadThisWeek > 0 
                         ? `You've read ${daysReadThisWeek} day${daysReadThisWeek !== 1 ? 's' : ''} this week! 🎉`
-                        : `Start reading to build your streak!`
+                        : 'Start reading to build your streak!'
                     }
                 </p>
                 <div className="grid grid-cols-7 gap-2">
                     {weekDays.map((day, i) => (
                         <div key={i} className="text-center">
                             <div className="text-xs text-gray-500 font-medium mb-1">{day.label}</div>
-                            <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                            <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-sm font-bold ${
                                 day.hasReading 
                                     ? 'bg-purple-600 text-white' 
                                     : day.isPast 
@@ -2085,18 +2138,76 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile }) {
                                     minHeight: week.minutes > 0 ? '12px' : '3px'
                                 }}
                             />
-                            <div className="text-xs text-gray-500 mt-2 text-center leading-tight">
-                                {week.label}
-                            </div>
+                            <div className="text-xs text-gray-500 mt-2 text-center leading-tight">{week.label}</div>
                         </div>
                     ))}
                 </div>
+            </div>
+
+            {/* SHARE & REPORT BUTTONS */}
+            <div className="flex gap-3 mb-5">
+                <button 
+                    onClick={() => onShareCard(child)}
+                    className="flex-1 py-3 px-4 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-purple-100 transition-all"
+                >
+                    📤 Share
+                </button>
+                <button 
+                    onClick={() => onGenerateReport(child)}
+                    className="flex-1 py-3 px-4 bg-green-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
+                >
+                    📄 Report
+                </button>
             </div>
 
             {/* Total stats summary */}
             <div className="text-center text-sm text-gray-500 mb-4">
                 <span className="font-medium">{totalBooksRead} books</span> · <span className="font-medium">{Math.round(totalMinutes / 60)}h {totalMinutes % 60}m</span> total reading time
             </div>
+
+            {/* Edit Goal Modal */}
+            {showEditGoal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowEditGoal(false)}>
+                    <div className="absolute inset-0 bg-black bg-opacity-30" />
+                    <div className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-semibold mb-4">Edit Reading Goal</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Minutes per day</label>
+                            <input 
+                                type="number" 
+                                defaultValue={goal.minutesPerDay}
+                                id="edit-goal-minutes"
+                                className="w-full p-3 border border-gray-300 rounded-lg"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Days per week</label>
+                            <input 
+                                type="number" 
+                                defaultValue={goal.daysPerWeek}
+                                id="edit-goal-days"
+                                min="1" max="7"
+                                className="w-full p-3 border border-gray-300 rounded-lg"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowEditGoal(false)}
+                                className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600"
+                            >Cancel</button>
+                            <button 
+                                onClick={() => {
+                                    const mins = parseInt(document.getElementById('edit-goal-minutes').value) || 20;
+                                    const days = Math.min(7, Math.max(1, parseInt(document.getElementById('edit-goal-days').value) || 5));
+                                    updateChildGoal(childId, mins, days);
+                                    setShowEditGoal(false);
+                                }}
+                                className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700"
+                            >Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
