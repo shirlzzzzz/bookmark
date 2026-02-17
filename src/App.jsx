@@ -89,7 +89,7 @@ const fetchBookCover = async (bookTitle) => {
     return null;
   } catch (error) {
     console.error("Error fetching book cover:", error);
-    return null;$
+    return null;
   }
 };
 
@@ -107,8 +107,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
     const [showAddChild, setShowAddChild] = useState(false);
     const [showAddLog, setShowAddLog] = useState(false);
     const [prefillBook, setPrefillBook] = useState(null);
-    const [homeLibrary, setHomeLibrary] = useState([]);
-    const [selectedChild, setSelectedChild] = useState(null);
+const [selectedChild, setSelectedChild] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportChild, setReportChild] = useState(null);
     const [showCreateChallenge, setShowCreateChallenge] = useState(false);
@@ -146,8 +145,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             setSyncs(getStorageData('mybookmark_goals', []));
             setClassGroups(getStorageData('mybookmark_classgroups', []));
             setFamilyProfile(getStorageData('mybookmark_family', null));
-            setHomeLibrary(getStorageData('mybookmark_homelibrary', []));
-        } catch (err) {
+} catch (err) {
             console.error('Error loading data:', err);
             setError('Failed to load data. Your browser storage might be full or corrupted.');
         }
@@ -313,30 +311,6 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         }
     }, [classGroups]);
 
-    useEffect(() => {
-        try {
-            setStorageData('mybookmark_homelibrary', homeLibrary);
-        } catch (err) {
-            console.error('Error saving home library:', err);
-        }
-    }, [homeLibrary]);
-
-    const addToHomeLibrary = (book) => {
-        // book = { title, author, coverUrl }
-        if (homeLibrary.some(b => b.title === book.title)) return; // no dupes
-        setHomeLibrary([...homeLibrary, { 
-            id: Date.now().toString(),
-            title: book.title, 
-            author: book.author || '', 
-            coverUrl: book.coverUrl || book.cover || null,
-            addedDate: new Date().toISOString().split('T')[0]
-        }]);
-    };
-
-    const removeFromHomeLibrary = (bookId) => {
-        setHomeLibrary(homeLibrary.filter(b => b.id !== bookId));
-    };
-
     const addChild = async (name, grade, childType) => {
         // Validation
         if (!name || name.trim().length === 0) {
@@ -348,17 +322,15 @@ export default function App({ user, onSignOut, onOpenAuth }) {
             setError('Child name is too long (max 50 characters)');
             return false;
         }
-
-        const recommendation = getRecommendation(grade);
         const newChild = {
             id: Date.now().toString(),
             name: name.trim(),
             grade: grade ? grade.trim() : '',
             childType: childType || 'student',
             goal: {
-                minutesPerDay: recommendation.minutes,
-                daysPerWeek: recommendation.daysPerWeek,
-                isCustom: false
+                minutesPerDay: 0,
+                daysPerWeek: 0,
+                isCustom: true
             },
             milestones: []
         };
@@ -400,10 +372,14 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         ));
     };
 
-    const deleteChild = (id) => {
-        if (confirm('Delete this child? Their reading logs will remain but won\'t show in summaries.')) {
-            setChildren(children.filter(c => c.id !== id));
+    const archiveChild = (id) => {
+        if (confirm('Pause this reader? They can be restored anytime. Their reading history is always kept.')) {
+            setChildren(children.map(c => c.id === id ? { ...c, archived: true } : c));
         }
+    };
+
+    const restoreChild = (id) => {
+        setChildren(children.map(c => c.id === id ? { ...c, archived: false } : c));
     };
 
     const addLog = async (childId, bookTitle, minutes, date, subject, genre, coverUrl) => {
@@ -499,8 +475,9 @@ export default function App({ user, onSignOut, onOpenAuth }) {
         return true;
     };
 
+
     const deleteLog = (id) => {
-        if (confirm('Delete this reading log entry?')) {
+        if (confirm('Remove this reading memory?')) {
             setLogs(logs.filter(l => l.id !== id));
         }
     };
@@ -629,7 +606,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
     };
 
     const deleteSync = (syncId) => {
-        if (confirm('Delete this reading goal?')) {
+        if (confirm('Remove this reading goal?')) {
             setSyncs(syncs.filter(s => s.id !== syncId));
         }
     };
@@ -735,9 +712,9 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                 <button
                                     onClick={() => setShowSettings(true)}
                                     className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
-                                    title="Settings"
+                                    title="Reading Home"
                                 >
-                                    ⚙️ <span className="text-xs">Settings</span>
+                                    ⚙️ <span className="text-xs">Reading Home</span>
                                 </button>
                             </div>
                             
@@ -749,7 +726,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                     </h1>
                                     <p className="text-sm opacity-90">
                                         {daysReadThisWeek === 0 
-                                            ? "✨ Let's get started this week!" 
+                                            ? "Your family's reading space" 
                                             : `📖 You've read together ${daysReadThisWeek} time${daysReadThisWeek !== 1 ? 's' : ''} this week`}
                                         {rereadBooks > 0 && ` · 🔁 ${rereadBooks} favorite${rereadBooks !== 1 ? 's' : ''} reread`}
                                     </p>
@@ -795,10 +772,10 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             <span className="text-2xl">💜</span>
                             <div className="flex-1">
                                 <p className="font-medium text-purple-900">
-                                    Logged! You read {celebration.bookTitle} with {celebration.childName} today.
+                                    Another memory saved 📖 You read {celebration.bookTitle} with {celebration.childName} today.
                                 </p>
                                 <p className="text-sm text-purple-700 mt-1">
-                                    That counts — even on busy days.
+                                    Saved to your library — these are the ones you'll remember.
                                 </p>
                             </div>
                         </div>
@@ -876,7 +853,11 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             selectedChild={selectedChild}
                             onSelectChild={setSelectedChild}
                             familyProfile={familyProfile}
-                        />
+onLogBook={(book) => {
+                                setPrefillBook(book);
+                                setShowAddLog(true);
+                            }}
+/>
                     )}
                     {currentView === 'progress' && (
                         <ProgressView 
@@ -903,13 +884,6 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             logs={logs}
                             onOpenSettings={() => setShowSettings(true)}
                             familyProfile={familyProfile}
-                            homeLibrary={homeLibrary}
-                            onAddToHomeLibrary={addToHomeLibrary}
-                            onRemoveFromHomeLibrary={removeFromHomeLibrary}
-                            onLogBook={(book) => {
-                                setPrefillBook(book);
-                                setShowAddLog(true);
-                            }}
                         />
                     )}
                 </div>
@@ -936,7 +910,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                 {/* Modals */}
                 {showAddChild && (
                     <AddChildModal 
-                        onClose={() => setShowAddChild(false)}
+                        onClose={() => { setShowAddChild(false); setShowSettings(true); }}
                         onAdd={addChild}
                     />
                 )}
@@ -1027,7 +1001,8 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                             setShowSettings(false);
                             setShowAddChild(true);
                         }}
-                        onDeleteChild={deleteChild}
+                        onDeleteChild={archiveChild}
+                        logs={logs}
                         onUpdateChild={updateChild}
                         onExport={exportData}
                         onImport={importData}
@@ -1037,6 +1012,17 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                         onSignIn={() => {
                             setShowSettings(false);
                             onOpenAuth('signin');
+                        }}
+                    
+                        onShareCard={(child) => {
+                            setShareCardChild(child);
+                            setShowShareCard(true);
+                            setShowSettings(false);
+                        }}
+                        onGenerateReport={(child) => {
+                            setReportChild(child);
+                            setShowReportModal(true);
+                            setShowSettings(false);
                         }}
                     />
                 )}
@@ -1056,7 +1042,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                 
                                 <div className="space-y-4">
                                     <div className="bg-purple-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-purple-800 mb-1">1. Log Reading Easily</h4>
+                                        <h4 className="font-semibold text-purple-800 mb-1">1. Keep Stories in Seconds</h4>
                                         <p className="text-sm text-gray-600">Log read-aloud or independent reading in seconds. Track minutes, books, and chapter completion—all in one place.</p>
                                     </div>
                                     
@@ -1090,8 +1076,8 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                 <h3 className="text-lg font-semibold text-purple-700 mb-3">✨ Key Features</h3>
                                 <ul className="text-sm text-gray-600 space-y-2 ml-4">
                                     <li>• Unlimited children per family</li>
-                                    <li>• Read-aloud + independent reading tracking</li>
-                                    <li>• Minutes + book completion tracking</li>
+                                    <li>• Read-aloud + independent reading</li>
+                                    <li>• Minutes + book completion</li>
                                     <li>• Chapter book support</li>
                                     <li>• Visual progress dashboards</li>
                                     <li>• Optional class & read-a-thon participation</li>
@@ -1155,7 +1141,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                         
                                         <div>
                                             <h4 className="font-medium text-gray-800">Do you track minutes or books?</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Both. Parents can log reading minutes, book titles, and book completion (especially helpful for chapter books). This gives you a complete picture of reading habits.</p>
+                                            <p className="text-sm text-gray-600 mt-1">Both. Parents can save reading minutes, book titles, and book completion (especially helpful for chapter books). This gives you a complete picture of reading habits.</p>
                                         </div>
                                         
                                         <div>
@@ -1164,7 +1150,7 @@ export default function App({ user, onSignOut, onOpenAuth }) {
                                         </div>
                                         
                                         <div>
-                                            <h4 className="font-medium text-gray-800">Can kids log reading themselves?</h4>
+                                            <h4 className="font-medium text-gray-800">Can kids save stories themselves?</h4>
                                             <p className="text-sm text-gray-600 mt-1">OurBookmark is parent-controlled by design. Older children can participate with supervision, but parents always manage the account, data, and sharing.</p>
                                         </div>
                                     </div>
@@ -1258,13 +1244,13 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
         return (
             <div className="text-center py-16">
                 <div className="text-6xl mb-4">{babyEmoji}</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
+                <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
-                    Set up your family in
+                    Set up your readers in
                     <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
-                        Settings
+                        Reading Home
                     </button>
-                    to start logging reading
+                    to start saving stories
                 </p>
             </div>
         );
@@ -1278,7 +1264,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                 className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all"
                 onClick={onAddLog}
             >
-                ➕ Log Reading Session
+                📖 Save Story
             </button>
 
             {recentLogs.length === 0 ? (
@@ -1300,7 +1286,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                                         <img 
                                             src={log.coverUrl} 
                                             alt="Book cover" 
-                                            className="w-14 h-20 object-cover rounded shadow-sm flex-shrink-0"
+                                            className="w-14 h-20 object-contain bg-white rounded shadow-sm flex-shrink-0"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                             }}
@@ -1341,21 +1327,48 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
 }
 
 // Library View Component - Combines Log, Goals, and Bookshelf
-function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog, onCreateGoal, onCompleteGoal, onDeleteGoal, onOpenSettings, selectedChild, onSelectChild, familyProfile }) {
+function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog, onCreateGoal, onCompleteGoal, onDeleteGoal, onOpenSettings, selectedChild, onSelectChild, familyProfile, onLogBook }) {
     const [section, setSection] = useState('recent');
+const [libSearchQuery, setLibSearchQuery] = useState('');
+    const [libSearchResults, setLibSearchResults] = useState([]);
+    const [libSearching, setLibSearching] = useState(false);
+    const [miniLog, setMiniLog] = useState(null);
+    const [miniLogChild, setMiniLogChild] = useState(children[0]?.id || '');
+    const [miniLogMinutes, setMiniLogMinutes] = useState('10');
     const babyEmoji = familyProfile?.babyEmoji || '👶';
+
+    const searchBooksForLib = async (query) => {
+        if (!query.trim()) return;
+        setLibSearching(true);
+        try {
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&printType=books`);
+            const data = await res.json();
+            setLibSearchResults(data.items ? data.items.map(item => ({
+                title: item.volumeInfo?.title || 'Unknown',
+                author: item.volumeInfo?.authors?.[0] || '',
+                coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+            })) : []);
+        } catch (err) { setLibSearchResults([]); }
+        setLibSearching(false);
+    };
+
+    const handleQuickLog = () => {
+        if (!miniLog || !miniLogChild) return;
+        onLogBook({ title: miniLog.author ? `${miniLog.title} by ${miniLog.author}` : miniLog.title, author: miniLog.author, cover: miniLog.coverUrl });
+        setMiniLog(null);
+    };
 
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
                 <div className="text-6xl mb-4">{babyEmoji}</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
+                <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
-                    Set up your family in{' '}
+                    Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
-                        Settings
+                        Reading Home
                     </button>
-                    {' '}to start logging reading
+                    {' '}to start saving stories
                 </p>
             </div>
         );
@@ -1373,12 +1386,15 @@ function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog,
 
     return (
         <div>
-            {/* Log Reading Button */}
+            {/* ===== HOME SHELF ===== */}
+            
+
+            {/* Save Story Button */}
             <button 
                 className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-4"
                 onClick={onAddLog}
             >
-                ➕ Log Reading Session
+                📖 Save Story
             </button>
 
             {/* Active Goals Summary */}
@@ -1421,21 +1437,14 @@ function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog,
                 </div>
             )}
 
-            {activeGoals.length === 0 && (
-                <button 
-                    onClick={onCreateGoal}
-                    className="w-full mb-5 p-3 border-2 border-dashed border-purple-200 rounded-lg text-sm text-purple-600 font-medium hover:bg-purple-50 transition-all"
-                >
-                    🎯 Set a Reading Goal
-                </button>
-            )}
+            
 
             {/* Recent Sessions */}
             {recentLogs.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
                     <div className="text-5xl mb-3">📖</div>
                     <p className="text-sm">No reading sessions yet</p>
-                    <p className="text-xs mt-1">Tap "Log Reading Session" to get started!</p>
+                    <p className="text-xs mt-1">Tap "Save Story" to keep your first memory!</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -1445,7 +1454,7 @@ function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog,
                         return (
                             <div key={log.id} className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl">
                                 {log.coverUrl ? (
-                                    <img src={log.coverUrl} alt="" className="w-12 h-16 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                                    <img src={log.coverUrl} alt="" className="w-12 h-16 object-contain bg-white rounded-lg shadow-sm flex-shrink-0" />
                                 ) : (
                                     <div className="w-12 h-16 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <span className="text-lg">📖</span>
@@ -1700,7 +1709,7 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                 onClick={() => onLogBook({ title: book.title, author: book.author, cover: book.cover })}
                 className="mt-1 text-xs text-purple-600 font-medium hover:text-purple-800"
             >
-                + Log this
+                + Keep this
             </button>
         </div>
     );
@@ -1869,13 +1878,13 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
         return (
             <div className="text-center py-16">
                 <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
+                <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
-                    Set up your family in{' '}
+                    Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
-                        Settings
+                        Reading Home
                     </button>
-                    {' '}to track progress
+                    {' '}to start saving stories
                 </p>
             </div>
         );
@@ -1894,7 +1903,9 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
     const weekLogs = childLogs.filter(l => new Date(l.date) >= weekStart);
     const weekMinutes = weekLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
     const weeklyGoalMinutes = goal.minutesPerDay * goal.daysPerWeek;
-    const goalProgress = Math.min(100, Math.round((weekMinutes / weeklyGoalMinutes) * 100));
+    const goalProgress = weeklyGoalMinutes > 0
+        ? Math.min(100, Math.round((weekMinutes / weeklyGoalMinutes) * 100))
+        : 0;
     const daysReadThisWeekChild = new Set(weekLogs.map(l => l.date)).size;
     const daysNeeded = Math.max(0, goal.daysPerWeek - daysReadThisWeekChild);
 
@@ -1997,7 +2008,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
             {/* CHILD SELECTOR */}
             {children.length > 1 && (
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reader</label>
                     <select 
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         value={childId}
@@ -2017,7 +2028,12 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <h3 className="font-semibold text-gray-800">📖 Weekly Reading Goal</h3>
-                        <p className="text-sm text-purple-600">{goal.minutesPerDay} min/day · {goal.daysPerWeek} days/week</p>
+                        <p className="text-sm text-purple-600">
+                          {(goal.minutesPerDay > 0 && goal.daysPerWeek > 0)
+                            ? (<>{goal.minutesPerDay} min/day · {goal.daysPerWeek} days/week</>)
+                            : (<>No goal set yet</>)
+                          }
+                        </p>
                     </div>
                     <button 
                         onClick={() => setShowEditGoal(true)}
@@ -2144,21 +2160,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                 </div>
             </div>
 
-            {/* SHARE & REPORT BUTTONS */}
-            <div className="flex gap-3 mb-5">
-                <button 
-                    onClick={() => onShareCard(child)}
-                    className="flex-1 py-3 px-4 bg-purple-50 text-purple-700 border border-purple-200 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-purple-100 transition-all"
-                >
-                    📤 Share
-                </button>
-                <button 
-                    onClick={() => onGenerateReport(child)}
-                    className="flex-1 py-3 px-4 bg-green-600 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-700 transition-all"
-                >
-                    📄 Report
-                </button>
-            </div>
+            
 
             {/* Total stats summary */}
             <div className="text-center text-sm text-gray-500 mb-4">
@@ -2175,7 +2177,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                             <label className="block text-sm font-medium text-gray-700 mb-1">Minutes per day</label>
                             <input 
                                 type="number" 
-                                defaultValue={goal.minutesPerDay}
+                                defaultValue={goal.minutesPerDay || 20}
                                 id="edit-goal-minutes"
                                 className="w-full p-3 border border-gray-300 rounded-lg"
                             />
@@ -2184,7 +2186,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                             <label className="block text-sm font-medium text-gray-700 mb-1">Days per week</label>
                             <input 
                                 type="number" 
-                                defaultValue={goal.daysPerWeek}
+                                defaultValue={goal.daysPerWeek || 5}
                                 id="edit-goal-days"
                                 min="1" max="7"
                                 className="w-full p-3 border border-gray-300 rounded-lg"
@@ -2215,187 +2217,43 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
 
 
 
-// Bookshelf View Component - Visual grid of all books read + Home Library
-function BookshelfView({ children, logs, onOpenSettings, familyProfile, homeLibrary, onAddToHomeLibrary, onRemoveFromHomeLibrary, onLogBook }) {
+// Bookshelf View Component - Visual grid of all books read
+function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
     const [bookshelfChild, setBookshelfChild] = useState('all');
-    const [showAddToLib, setShowAddToLib] = useState(false);
-    const [libSearchQuery, setLibSearchQuery] = useState('');
-    const [libSearchResults, setLibSearchResults] = useState([]);
-    const [libSearching, setLibSearching] = useState(false);
-    const [miniLog, setMiniLog] = useState(null); // { title, author, coverUrl }
-    const [miniLogChild, setMiniLogChild] = useState(children[0]?.id || '');
-    const [miniLogMinutes, setMiniLogMinutes] = useState('10');
-
-    const searchBooksForLib = async (query) => {
-        if (!query.trim()) return;
-        setLibSearching(true);
-        try {
-            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=8&printType=books`);
-            const data = await res.json();
-            if (data.items) {
-                setLibSearchResults(data.items.map(item => ({
-                    title: item.volumeInfo?.title || 'Unknown',
-                    author: item.volumeInfo?.authors?.[0] || '',
-                    coverUrl: item.volumeInfo?.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
-                })));
-            } else {
-                setLibSearchResults([]);
-            }
-        } catch (err) {
-            setLibSearchResults([]);
-        }
-        setLibSearching(false);
-    };
-
-    const handleQuickLog = () => {
-        if (!miniLog || !miniLogChild) return;
-        const bookTitle = miniLog.author 
-            ? `${miniLog.title} by ${miniLog.author}` 
-            : miniLog.title;
-        onLogBook({ title: bookTitle, author: miniLog.author, cover: miniLog.coverUrl });
-        setMiniLog(null);
-    };
+    const babyEmoji = familyProfile?.babyEmoji || '👶';
 
     if (children.length === 0) {
         return (
             <div className="text-center py-16">
-                <div className="text-6xl mb-4">📚</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
+                <div className="text-6xl mb-4">{babyEmoji}</div>
+                <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
-                    Set up your family in{' '}
+                    Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
-                        Settings
+                        Reading Home
                     </button>
-                    {' '}to build your bookshelf
+                    {' '}to start saving stories
                 </p>
             </div>
         );
     }
 
-    const childId = bookshelfChild;
-    const child = children.find(c => c.id === childId);
-    const childLogs = childId === 'all' ? logs : logs.filter(l => l.childId === childId);
-    
-    // Get unique books with their covers
-    const booksMap = new Map();
-    childLogs.forEach(log => {
-        if (!booksMap.has(log.bookTitle)) {
-            booksMap.set(log.bookTitle, {
-                title: log.bookTitle,
-                coverUrl: log.coverUrl,
-                totalMinutes: log.minutes,
-                timesRead: 1,
-                lastRead: log.date
-            });
-        } else {
-            const book = booksMap.get(log.bookTitle);
-            book.totalMinutes += log.minutes;
-            book.timesRead += 1;
-            if (new Date(log.date) > new Date(book.lastRead)) {
-                book.lastRead = log.date;
-            }
-        }
-    });
-    
-    const books = Array.from(booksMap.values()).sort((a, b) => 
-        new Date(b.lastRead) - new Date(a.lastRead)
-    );
-
-    const displayName = childId === 'all' ? 'Family' : (child?.name || 'Family');
-
-    // Get read counts for home library books
-    const getReadCount = (bookTitle) => {
-        return logs.filter(l => {
-            const logTitle = (l.bookTitle || '').split(' by ')[0].toLowerCase().trim();
-            return logTitle === bookTitle.toLowerCase().trim();
-        }).length;
-    };
+    const filteredLogs = bookshelfChild === 'all' ? logs : logs.filter(l => l.childId === bookshelfChild);
+    const books = [...new Map(filteredLogs.map(l => [l.bookTitle, l])).values()];
+    const selectedChildObj = children.find(c => c.id === bookshelfChild);
+    const displayName = bookshelfChild === 'all' ? 'Everyone' : (selectedChildObj?.name || 'Unknown');
 
     return (
         <div>
-            {/* ===== OUR BOOKS — Home Library (only if has books or first time prompt) ===== */}
-            {homeLibrary.length > 0 && (
-                <div className="bg-purple-50 -mx-5 -mt-5 px-5 pt-4 pb-4 mb-4 border-b border-purple-100">
-                    <div className="flex justify-between items-baseline mb-1">
-                        <h3 className="text-base font-semibold text-gray-800">🏠 Our Books</h3>
-                        <button 
-                            onClick={() => setShowAddToLib(true)}
-                            className="text-xs text-purple-600 font-semibold hover:text-purple-800"
-                        >
-                            + Add
-                        </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3">Tap to log a reading session</p>
-                    
-                    <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-                        {homeLibrary.map((book) => {
-                            const readCount = getReadCount(book.title);
-                            return (
-                                <div 
-                                    key={book.id} 
-                                    className="flex-shrink-0 w-20 text-center cursor-pointer relative"
-                                    onClick={() => {
-                                        setMiniLog(book);
-                                        setMiniLogChild(children[0]?.id || '');
-                                        setMiniLogMinutes('10');
-                                    }}
-                                >
-                                    {readCount > 0 && (
-                                        <span className="absolute top-1 left-1 bg-black bg-opacity-60 text-white text-xs font-bold px-1.5 py-0.5 rounded-full z-10">
-                                            {readCount}×
-                                        </span>
-                                    )}
-                                    <div className="absolute bottom-7 right-0 w-5 h-5 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs z-10 border-2 border-white shadow">
-                                        ▶
-                                    </div>
-                                    {book.coverUrl ? (
-                                        <img 
-                                            src={book.coverUrl} 
-                                            alt={book.title}
-                                            className="w-20 h-28 object-cover rounded shadow-md"
-                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                        />
-                                    ) : null}
-                                    <div 
-                                        className="w-20 h-28 bg-gradient-to-br from-purple-100 to-purple-200 rounded shadow-md items-center justify-center"
-                                        style={{ display: book.coverUrl ? 'none' : 'flex' }}
-                                    >
-                                        <span className="text-xl">📖</span>
-                                    </div>
-                                    <p className="text-xs font-medium text-gray-700 mt-1 truncate w-20">{book.title}</p>
-                                </div>
-                            );
-                        })}
-                        <div 
-                            className="flex-shrink-0 w-20 h-28 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all"
-                            onClick={() => setShowAddToLib(true)}
-                        >
-                            <span className="text-xl text-gray-400">+</span>
-                            <span className="text-xs text-gray-400 font-medium">Add</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Prompt to create home library (only when empty, subtle) */}
-            {homeLibrary.length === 0 && (
-                <button 
-                    onClick={() => setShowAddToLib(true)}
-                    className="w-full mb-4 p-3 border-2 border-dashed border-gray-300 rounded-xl text-center hover:border-purple-400 hover:bg-purple-50 transition-all"
-                >
-                    <span className="text-sm text-gray-500">🏠 Add books you own for quick logging</span>
-                </button>
-            )}
-
-            {/* Child Selector */}
+            {/* Reader Selector */}
             <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Reader</label>
                 <select 
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     value={bookshelfChild}
                     onChange={(e) => setBookshelfChild(e.target.value)}
                 >
-                    <option value="all">All Children</option>
+                    <option value="all">All Readers</option>
                     {children.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
@@ -2408,277 +2266,33 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile, homeLibr
             </div>
 
             {books.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                    <div className="text-6xl mb-4">📚</div>
-                    <h3 className="text-lg text-gray-600 mb-2">No books yet</h3>
-                    <p className="text-sm">Start logging reading to build your bookshelf!</p>
+                <div className="text-center py-10">
+                    <div className="text-4xl mb-3">📚</div>
+                    <h3 className="text-lg text-gray-600 mb-2">Your shelf is waiting</h3>
+                    <p className="text-sm text-gray-400">Save a story to start building your bookshelf!</p>
                 </div>
             ) : (
-                <div>
-                    <BookshelfShelves
-                        childName={child?.name || "your child"}
-                        favorites={books.filter((b) => (b.timesRead || 0) > 1)}
-                        allBooks={books}
-                        onOpenBook={(book) => console.log("Clicked book:", book)}
-                    />
-                </div>
-            )}
-
-            {/* ===== MINI LOG SHEET ===== */}
-            {miniLog && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMiniLog(null)}>
-                    <div className="absolute inset-0 bg-black bg-opacity-30" />
-                    <div 
-                        className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8 shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button 
-                            onClick={() => setMiniLog(null)}
-                            className="absolute top-3 right-4 text-gray-400 text-lg"
-                        >✕</button>
-
-                        <div className="flex items-center gap-3 mb-4">
-                            {miniLog.coverUrl ? (
-                                <img src={miniLog.coverUrl} alt="" className="w-12 h-16 rounded object-cover shadow" />
-                            ) : (
-                                <div className="w-12 h-16 bg-purple-100 rounded flex items-center justify-center text-lg">📖</div>
-                            )}
-                            <div>
-                                <div className="font-semibold text-base">{miniLog.title}</div>
-                                {miniLog.author && <div className="text-sm text-gray-500">{miniLog.author}</div>}
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2 mb-3">
-                            <select 
-                                value={miniLogChild}
-                                onChange={(e) => setMiniLogChild(e.target.value)}
-                                className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm"
+                <div className="grid grid-cols-3 gap-4">
+                    {books.map((log, i) => (
+                        <div key={i} className="text-center">
+                            {log.coverUrl ? (
+                                <img 
+                                    src={log.coverUrl} 
+                                    alt={log.bookTitle}
+                                    className="w-full h-40 object-contain rounded-lg shadow-md bg-white"
+                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                />
+                            ) : null}
+                            <div 
+                                className="w-full h-40 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg shadow-md items-center justify-center"
+                                style={{ display: log.coverUrl ? 'none' : 'flex' }}
                             >
-                                {children.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                            <input 
-                                type="number"
-                                value={miniLogMinutes}
-                                onChange={(e) => setMiniLogMinutes(e.target.value)}
-                                className="w-20 p-2.5 border border-gray-300 rounded-lg text-sm text-center"
-                                placeholder="min"
-                            />
+                                <span className="text-2xl">📖</span>
+                            </div>
+                            <p className="text-xs font-medium text-gray-700 mt-2 truncate">{(log.bookTitle || '').split(' by ')[0]}</p>
+                            <p className="text-xs text-gray-400 truncate">{(log.bookTitle || '').includes(' by ') ? (log.bookTitle || '').split(' by ')[1] : ''}</p>
                         </div>
-
-                        <div className="flex gap-2 mb-4">
-                            {[5, 10, 15, 20, 30].map(m => (
-                                <button 
-                                    key={m}
-                                    onClick={() => setMiniLogMinutes(String(m))}
-                                    className={`flex-1 py-2 rounded-full text-xs font-semibold border transition-all ${
-                                        miniLogMinutes === String(m) 
-                                            ? 'bg-purple-100 border-purple-400 text-purple-700' 
-                                            : 'border-gray-200 text-gray-600 hover:border-purple-300'
-                                    }`}
-                                >
-                                    {m} min
-                                </button>
-                            ))}
-                        </div>
-
-                        <button 
-                            onClick={handleQuickLog}
-                            className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold text-sm hover:bg-purple-700 transition-all"
-                        >
-                            ✅ Log Reading Session
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* ===== ADD TO HOME LIBRARY MODAL ===== */}
-            {showAddToLib && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => { setShowAddToLib(false); setLibSearchResults([]); setLibSearchQuery(''); }}>
-                    <div className="absolute inset-0 bg-black bg-opacity-30" />
-                    <div 
-                        className="relative bg-white rounded-t-2xl w-full max-w-lg p-5 pb-8 shadow-xl max-h-[80vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <button 
-                            onClick={() => { setShowAddToLib(false); setLibSearchResults([]); setLibSearchQuery(''); }}
-                            className="absolute top-3 right-4 text-gray-400 text-lg"
-                        >✕</button>
-
-                        <h3 className="text-lg font-semibold mb-1">Add Books to Your Library</h3>
-                        <p className="text-xs text-gray-500 mb-4">Search for books your family owns</p>
-
-                        <div className="flex gap-2 mb-4">
-                            <input 
-                                type="text"
-                                value={libSearchQuery}
-                                onChange={(e) => setLibSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && searchBooksForLib(libSearchQuery)}
-                                placeholder="Search by title or author..."
-                                className="flex-1 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                autoFocus
-                            />
-                            <button 
-                                onClick={() => searchBooksForLib(libSearchQuery)}
-                                className="px-4 bg-purple-600 text-white rounded-lg text-sm font-medium"
-                            >🔍</button>
-                        </div>
-
-                        {libSearching && (
-                            <div className="text-center py-6">
-                                <div className="text-2xl animate-pulse">📚</div>
-                                <p className="text-sm text-gray-500 mt-2">Searching...</p>
-                            </div>
-                        )}
-
-                        {libSearchResults.length > 0 && (
-                            <div className="space-y-2">
-                                {libSearchResults.map((book, i) => {
-                                    const alreadyAdded = homeLibrary.some(b => b.title === book.title);
-                                    return (
-                                        <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                                            {book.coverUrl ? (
-                                                <img src={book.coverUrl} alt="" className="w-10 h-14 rounded object-cover flex-shrink-0" />
-                                            ) : (
-                                                <div className="w-10 h-14 bg-purple-100 rounded flex items-center justify-center flex-shrink-0 text-sm">📖</div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium truncate">{book.title}</div>
-                                                <div className="text-xs text-gray-500 truncate">{book.author}</div>
-                                            </div>
-                                            <button 
-                                                onClick={() => !alreadyAdded && onAddToHomeLibrary(book)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0 ${
-                                                    alreadyAdded 
-                                                        ? 'bg-gray-100 text-gray-400 cursor-default' 
-                                                        : 'bg-purple-600 text-white hover:bg-purple-700'
-                                                }`}
-                                            >
-                                                {alreadyAdded ? '✓ Added' : '+ Add'}
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-
-                        {/* Show current home library for removal */}
-                        {homeLibrary.length > 0 && (
-                            <div className="mt-6">
-                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">In your library</div>
-                                <div className="space-y-1">
-                                    {homeLibrary.map(book => (
-                                        <div key={book.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                                            {book.coverUrl ? (
-                                                <img src={book.coverUrl} alt="" className="w-8 h-11 rounded object-cover flex-shrink-0" />
-                                            ) : (
-                                                <div className="w-8 h-11 bg-purple-100 rounded flex items-center justify-center flex-shrink-0 text-xs">📖</div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="text-sm font-medium truncate">{book.title}</div>
-                                            </div>
-                                            <button 
-                                                onClick={() => onRemoveFromHomeLibrary(book.id)}
-                                                className="text-xs text-red-500 font-medium hover:text-red-700"
-                                            >Remove</button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// Kids View Component
-function KidsView({ children, onAddChild, onDeleteChild, classGroups, onJoinClass, onCreateClass, onLeaveClass }) {
-    return (
-        <div>
-            <button 
-                className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-3"
-                onClick={onAddChild}
-            >
-                ➕ Add Child
-            </button>
-
-            {/* Class Group Actions */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
-                <button 
-                    className="py-2.5 px-4 bg-blue-50 border-2 border-blue-200 text-blue-700 text-sm font-medium rounded-lg hover:bg-blue-100 transition-all"
-                    onClick={onJoinClass}
-                >
-                    👥 Join Class Group
-                </button>
-                <button 
-                    className="py-2.5 px-4 bg-green-50 border-2 border-green-200 text-green-700 text-sm font-medium rounded-lg hover:bg-green-100 transition-all"
-                    onClick={onCreateClass}
-                >
-                    🏫 Create Class (Teachers)
-                </button>
-            </div>
-
-            {children.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                    <div className="text-6xl mb-4">👶</div>
-                    <h3 className="text-lg text-gray-600 mb-2">No children added yet</h3>
-                    <p className="text-sm">Click above to add your first child</p>
-                </div>
-            ) : (
-                <div className="mt-6 space-y-3">
-                    {children.map(child => {
-                        // Find class groups this child is in
-                        const childClasses = classGroups.filter(group => 
-                            group.students.some(s => s.childId === child.id)
-                        );
-
-                        return (
-                            <div key={child.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <div className="font-semibold text-gray-800">{child.name}</div>
-                                        {child.grade && (
-                                            <div className="text-sm text-gray-500">Grade {child.grade}</div>
-                                        )}
-                                    </div>
-                                    <button 
-                                        className="text-red-500 hover:text-red-700 text-sm px-2 py-1"
-                                        onClick={() => onDeleteChild(child.id)}
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-
-                                {/* Show class memberships */}
-                                {childClasses.length > 0 && (
-                                    <div className="mt-3 space-y-2">
-                                        {childClasses.map(classGroup => (
-                                            <div key={classGroup.id} className="p-2 bg-blue-50 rounded-lg flex items-center justify-between">
-                                                <div className="text-sm">
-                                                    <div className="font-medium text-blue-900">
-                                                        👥 {classGroup.teacherName}'s {classGroup.grade}
-                                                    </div>
-                                                    <div className="text-xs text-blue-700">
-                                                        {classGroup.school}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => onLeaveClass(classGroup.id, child.id)}
-                                                    className="text-xs text-red-600 hover:text-red-800 font-medium"
-                                                >
-                                                    Leave
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                    ))}
                 </div>
             )}
         </div>
@@ -2690,8 +2304,6 @@ function AddChildModal({ onClose, onAdd }) {
     const [name, setName] = useState('');
     const [grade, setGrade] = useState('');
     const [childType, setChildType] = useState('student');
-
-    const recommendation = grade ? getRecommendation(grade) : null;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -2707,7 +2319,7 @@ function AddChildModal({ onClose, onAdd }) {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">Add Child</h2>
+                <h2 className="text-xl font-semibold mb-5 text-gray-800">Add a Reader</h2>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
@@ -2716,7 +2328,7 @@ function AddChildModal({ onClose, onAdd }) {
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="Enter child's name"
+                            placeholder="Reader's name"
                             autoFocus
                             required
                         />
@@ -2747,20 +2359,10 @@ function AddChildModal({ onClose, onAdd }) {
                                 onChange={(e) => setGrade(e.target.value)}
                                 placeholder="e.g., 2nd, K, 5"
                             />
-                            {recommendation && (
-                                <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                                    <div className="text-xs font-semibold text-purple-900 mb-1">
-                                        📚 Recommended Reading Goal
-                                    </div>
-                                    <div className="text-sm text-purple-700">
-                                        {recommendation.minutes} min/day • {recommendation.daysPerWeek} days/week
-                                    </div>
-                                    <div className="text-xs text-purple-600 mt-1">
-                                        Based on {recommendation.label} guidelines
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                            
+                        
+                            <div className="text-xs text-gray-500 mt-2">Set goals later in Reading Home.</div>
+</div>
                     )}
 
                     {(childType === 'baby' || childType === 'toddler') && (
@@ -2784,7 +2386,7 @@ function AddChildModal({ onClose, onAdd }) {
                             </div>
                             <ul className="text-sm text-green-700 space-y-1">
                                 <li>✓ Subject tagging for portfolios</li>
-                                <li>✓ Hours tracking</li>
+                                <li>✓ Reading time</li>
                                 <li>✓ State-compliant reports</li>
                                 <li>✓ Co-op group support</li>
                             </ul>
@@ -2792,14 +2394,14 @@ function AddChildModal({ onClose, onAdd }) {
                     )}
 
                     <button type="submit" className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
-                        Add Child
+                        Add Reader
                     </button>
                     <button 
                         type="button" 
                         className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
                         onClick={onClose}
                     >
-                        Cancel
+                        Back to Reading Home
                     </button>
                 </form>
             </div>
@@ -2919,26 +2521,6 @@ function EditChildModal({ child, onClose, onSave }) {
     );
 }
 
-// Grade-based reading recommendations (based on education research)
-const READING_RECOMMENDATIONS = {
-    'K': { minutes: 10, daysPerWeek: 5, label: 'Kindergarten' },
-    '1': { minutes: 15, daysPerWeek: 5, label: '1st Grade' },
-    '2': { minutes: 20, daysPerWeek: 5, label: '2nd Grade' },
-    '3': { minutes: 20, daysPerWeek: 5, label: '3rd Grade' },
-    '4': { minutes: 25, daysPerWeek: 5, label: '4th Grade' },
-    '5': { minutes: 30, daysPerWeek: 5, label: '5th Grade' },
-    '6': { minutes: 30, daysPerWeek: 5, label: '6th Grade' },
-    '7': { minutes: 35, daysPerWeek: 5, label: '7th Grade' },
-    '8': { minutes: 40, daysPerWeek: 5, label: '8th Grade' },
-    'default': { minutes: 20, daysPerWeek: 5, label: 'Elementary' }
-};
-
-const getRecommendation = (grade) => {
-    if (!grade) return READING_RECOMMENDATIONS['default'];
-    const normalized = grade.toString().toUpperCase().replace(/[^\dK]/g, '');
-    return READING_RECOMMENDATIONS[normalized] || READING_RECOMMENDATIONS['default'];
-};
-
 // Add Log Modal
 function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     const [selectedChildId, setSelectedChildId] = useState(children[0]?.id || '');
@@ -2986,7 +2568,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
         try {
             const searchQuery = encodeURIComponent(query);
             const response = await fetch(
-                `https://openlibrary.org/search.json?q=${searchQuery}&limit=10&fields=title,author_name,cover_i`
+                `https://www.googleapis.com/books/v1/volumes?q=${searchQuery}&maxResults=8&printType=books`
             );
             
             if (!response.ok) {
@@ -2995,13 +2577,13 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
             
             const data = await response.json();
             
-            if (data.docs && data.docs.length > 0) {
-                const books = data.docs
-                    .filter(doc => doc.title)
-                    .map(doc => ({
-                        title: doc.title,
-                        author: doc.author_name?.[0] || '',
-                        coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null
+            if (data.items && data.items.length > 0) {
+                const books = data.items
+                    .filter(item => item.volumeInfo?.title)
+                    .map(item => ({
+                        title: item.volumeInfo.title,
+                        author: item.volumeInfo.authors?.[0] || '',
+                        coverUrl: item.volumeInfo.imageLinks?.thumbnail?.replace('http:', 'https:') || null
                     }));
                 
                 setSuggestions(books);
@@ -3220,7 +2802,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">Log Reading Session</h2>
+                <h2 className="text-xl font-semibold mb-5 text-gray-800">Save a Story</h2>
                 
                 {/* Voice Input Section */}
                 {isSpeechSupported && (
@@ -3341,7 +2923,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                                             <img 
                                                                 src={book.coverUrl} 
                                                                 alt=""
-                                                                className="w-8 h-12 object-cover rounded shadow-sm"
+                                                                className="w-8 h-12 object-contain bg-white rounded shadow-sm"
                                                                 onError={(e) => e.target.style.display = 'none'}
                                                             />
                                                         )}
@@ -3380,7 +2962,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                 <img 
                                     src={coverUrl} 
                                     alt="Book cover" 
-                                    className="w-16 h-24 object-cover rounded shadow-md"
+                                    className="w-16 h-24 object-contain bg-white rounded shadow-md"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                         setCoverUrl(null);
@@ -3471,1593 +3053,70 @@ function EditGoalModal({ child, onClose, onSave }) {
     const [minutesPerDay, setMinutesPerDay] = useState(child.goal?.minutesPerDay || 20);
     const [daysPerWeek, setDaysPerWeek] = useState(child.goal?.daysPerWeek || 5);
 
-    const recommendation = getRecommendation(child.grade);
-    const isUsingRecommendation = 
-        minutesPerDay === recommendation.minutes && 
-        daysPerWeek === recommendation.daysPerWeek;
-
     const handleSubmit = (e) => {
         e.preventDefault();
         onSave(parseInt(minutesPerDay), parseInt(daysPerWeek));
     };
 
-    const useRecommendation = () => {
-        setMinutesPerDay(recommendation.minutes);
-        setDaysPerWeek(recommendation.daysPerWeek);
-    };
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
+                <h2 className="text-xl font-semibold mb-3 text-gray-800">
                     Edit Reading Goal for {child.name}
                 </h2>
-
-                {child.grade && (
-                    <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div className="text-sm font-medium text-purple-900 mb-1">
-                            📚 Recommended for {child.grade}
-                        </div>
-                        <div className="text-sm text-purple-700 mb-2">
-                            {recommendation.minutes} minutes/day • {recommendation.daysPerWeek} days/week
-                        </div>
-                        {!isUsingRecommendation && (
-                            <button
-                                type="button"
-                                onClick={useRecommendation}
-                                className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                            >
-                                Use Recommended Goal
-                            </button>
-                        )}
-                    </div>
-                )}
+                <p className="text-sm text-gray-600 mb-5">
+                    Set a goal that fits your routine. You can change it anytime.
+                </p>
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Minutes per day
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Minutes per day</label>
                         <input
                             type="number"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             value={minutesPerDay}
                             onChange={(e) => setMinutesPerDay(e.target.value)}
-                            min="5"
-                            max="120"
-                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            min="1"
                         />
                     </div>
 
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Days per week
-                        </label>
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Days per week</label>
                         <input
                             type="number"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             value={daysPerWeek}
                             onChange={(e) => setDaysPerWeek(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             min="1"
                             max="7"
-                            required
                         />
                     </div>
 
-                    <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
-                        Weekly goal: <strong>{minutesPerDay * daysPerWeek} minutes</strong>
-                    </div>
-
-                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
-                        Save Goal
-                    </button>
-                    <button 
-                        type="button" 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Report Modal Component
-function ReportModal({ child, logs, onClose }) {
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-    const [isGenerating, setIsGenerating] = useState(false);
-
-    // Set default start date to 30 days ago
-    useEffect(() => {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        setStartDate(thirtyDaysAgo.toISOString().split('T')[0]);
-    }, []);
-
-    const quickRanges = [
-        { label: 'Last 7 Days', days: 7 },
-        { label: 'Last 30 Days', days: 30 },
-        { label: 'This Month', days: 'month' },
-        { label: 'All Time', days: 'all' }
-    ];
-
-    const setQuickRange = (range) => {
-        if (range === 'all') {
-            if (logs.length > 0) {
-                const dates = logs.map(l => new Date(l.date));
-                setStartDate(new Date(Math.min(...dates)).toISOString().split('T')[0]);
-            }
-            setEndDate(new Date().toISOString().split('T')[0]);
-        } else if (range === 'month') {
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            setStartDate(monthStart.toISOString().split('T')[0]);
-            setEndDate(now.toISOString().split('T')[0]);
-        } else {
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - range);
-            setStartDate(start.toISOString().split('T')[0]);
-            setEndDate(end.toISOString().split('T')[0]);
-        }
-    };
-
-    const generateReport = async () => {
-        setIsGenerating(true);
-        try {
-            // Filter logs by date range
-            const filteredLogs = logs.filter(log => {
-                const logDate = new Date(log.date);
-                return logDate >= new Date(startDate) && logDate <= new Date(endDate);
-            });
-
-            // Calculate statistics
-            const totalMinutes = filteredLogs.reduce((sum, log) => sum + log.minutes, 0);
-            const totalBooks = new Set(filteredLogs.map(l => l.bookTitle)).size;
-            const daysRead = new Set(filteredLogs.map(l => l.date)).size;
-            const avgMinutes = Math.round(totalMinutes / filteredLogs.length) || 0;
-
-            // Create PDF
-const teacherName = ""; // TODO
-
-            const doc = new jsPDF();
-            const pageWidth = doc.internal.pageSize.getWidth();
-            
-            // Header
-            doc.setFontSize(20);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Reading Report', pageWidth / 2, 20, { align: 'center' });
-            
-            doc.setFontSize(16);
-            doc.text(child.name, pageWidth / 2, 30, { align: 'center' });
-            
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`, pageWidth / 2, 38, { align: 'center' });
-            
-            // Summary Statistics Box
-            doc.setFillColor(245, 245, 250);
-            doc.rect(15, 45, pageWidth - 30, 35, 'F');
-            
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Summary', 20, 55);
-            
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            doc.text(`Total Reading Time: ${totalMinutes} minutes`, 20, 65);
-            doc.text(`Books Read: ${totalBooks}`, 20, 72);
-            doc.text(`Days Read: ${daysRead}`, pageWidth / 2, 65);
-            doc.text(`Avg per Session: ${avgMinutes} min`, pageWidth / 2, 72);
-if (teacherName) doc.text(`Teacher: ${teacherName}`, 20, 79);
-
-            
-            // Reading Goal
-            if (child.goal) {
-                doc.text(`Goal: ${child.goal.minutesPerDay || 20} min/day, ${child.goal.daysPerWeek || 5} days/week`, 20, 79);
-            }
-            
-            // Reading Log Table
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Reading Log', 20, 95);
-            
-            // Table Header
-            doc.setFillColor(102, 126, 234);
-            doc.rect(15, 100, pageWidth - 30, 8, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9);
-            doc.text('Date', 20, 105);
-            doc.text('Book Title', 55, 105);
-            doc.text('Minutes', pageWidth - 35, 105);
-            
-            // Table Rows
-            doc.setTextColor(0, 0, 0);
-            doc.setFont('helvetica', 'normal');
-            let y = 115;
-            
-            filteredLogs.forEach((log, index) => {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                
-                // Alternate row colors
-                if (index % 2 === 0) {
-                    doc.setFillColor(249, 249, 252);
-                    doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
-                }
-                
-                doc.text(new Date(log.date).toLocaleDateString(), 20, y);
-                
-                // Truncate long book titles
-                let bookTitle = log.bookTitle || 'Unknown';
-                if (bookTitle.length > 45) {
-                    bookTitle = bookTitle.substring(0, 42) + '...';
-                }
-                doc.text(bookTitle, 55, y);
-                doc.text(String(log.minutes), pageWidth - 35, y);
-                
-                y += 8;
-            });
-            
-            // Footer with signature line
-            const footerY = Math.max(y + 20, 250);
-            if (footerY < 280) {
-                doc.setFontSize(10);
-                doc.text('Parent/Guardian Signature: _______________________', 20, footerY);
-                doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 60, footerY);
-            }
-	const pageHeight = doc.internal.pageSize.getHeight();
-	doc.setFontSize(9);
-	doc.setTextColor(120);
-	doc.text("Generated with OurBookmark - ourbookmark.com", pageWidth / 2, pageHeight - 10, { align: "center" });
-	doc.setTextColor(0);
-
-            
-            // Save the PDF
-            const fileName = `${child.name.replace(/\s+/g, '_')}_Reading_Report.pdf`;
-            doc.save(fileName);
-            
-            onClose();
-        } catch (error) {
-            console.error('Error generating report:', error);
-            alert('Failed to generate report. Please try again.');
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-    const filteredLogs = logs.filter(log => {
-        if (!startDate || !endDate) return true;
-        const logDate = new Date(log.date);
-        return logDate >= new Date(startDate) && logDate <= new Date(endDate);
-    });
-
-    const totalMinutes = filteredLogs.reduce((sum, log) => sum + log.minutes, 0);
-    const uniqueBooks = new Set(filteredLogs.map(l => l.bookTitle)).size;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    📄 Generate Reading Report for {child.name}
-                </h2>
-
-                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm font-medium text-blue-900 mb-2">
-                        This report will include:
-                    </div>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                        <li>✓ Professional PDF format</li>
-                        <li>✓ Summary statistics</li>
-                        <li>✓ Detailed reading log</li>
-                        <li>✓ Ready to submit to teachers</li>
-                    </ul>
-                </div>
-
-                {/* Quick Range Buttons */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Quick Select:</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {quickRanges.map(range => (
-                            <button
-                                key={range.label}
-                                type="button"
-                                onClick={() => setQuickRange(range.days)}
-                                className="px-3 py-2 bg-gray-100 hover:bg-purple-100 text-sm font-medium rounded-lg transition-colors"
-                            >
-                                {range.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Custom Date Range */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Custom Date Range:</label>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs text-gray-600 mb-1">Start Date</label>
-                            <input
-                                type="date"
-                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                max={endDate}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs text-gray-600 mb-1">End Date</label>
-                            <input
-                                type="date"
-                                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                min={startDate}
-                                max={new Date().toISOString().split('T')[0]}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Preview Stats */}
-                <div className="mb-5 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <div className="text-sm font-medium text-purple-900 mb-2">Report Preview:</div>
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                        <div>
-                            <div className="text-2xl font-bold text-purple-600">{filteredLogs.length}</div>
-                            <div className="text-xs text-purple-700">Sessions</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-purple-600">{totalMinutes}</div>
-                            <div className="text-xs text-purple-700">Minutes</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-purple-600">{uniqueBooks}</div>
-                            <div className="text-xs text-purple-700">Books</div>
-                        </div>
-                    </div>
-                </div>
-
-                {filteredLogs.length === 0 && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                        ⚠️ No reading sessions found in this date range
-                    </div>
-                )}
-
-                <button
-                    onClick={generateReport}
-                    disabled={isGenerating || filteredLogs.length === 0}
-                    className={`w-full py-3.5 px-6 rounded-lg font-medium transition-all mb-2 ${
-                        isGenerating || filteredLogs.length === 0
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
-                >
-                    {isGenerating ? '⏳ Generating Report...' : '📄 Generate PDF Report'}
-                </button>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isGenerating}
-                    className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                >
-                    Cancel
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// Challenges View Component
-function ChallengesView({ children, logs, challenges, onCreateChallenge, onJoinChallenge, onLeaveChallenge }) {
-    const [selectedChallenge, setSelectedChallenge] = useState(null);
-
-    // Helper function to calculate challenge progress
-    const calculateProgress = (challenge, childId) => {
-        const participantData = challenge.participants?.find(p => p.childId === childId);
-        if (!participantData) return null;
-
-        const challengeLogs = logs.filter(log => {
-            const logDate = new Date(log.date);
-            const startDate = new Date(challenge.startDate);
-            const endDate = new Date(challenge.endDate);
-            return log.childId === childId && logDate >= startDate && logDate <= endDate;
-        });
-
-        let current = 0;
-        if (challenge.goalType === 'books') {
-            current = new Set(challengeLogs.map(l => l.bookTitle)).size;
-        } else if (challenge.goalType === 'minutes') {
-            current = challengeLogs.reduce((sum, l) => sum + l.minutes, 0);
-        } else if (challenge.goalType === 'days') {
-            current = new Set(challengeLogs.map(l => l.date)).size;
-        }
-
-        const progress = Math.min(100, Math.round((current / challenge.goalTarget) * 100));
-        const milestone = getMilestone(challenge, progress);
-
-        return { current, progress, milestone, challengeLogs };
-    };
-
-    const getMilestone = (challenge, progress) => {
-        if (!challenge.milestones) return null;
-        const sorted = [...challenge.milestones].sort((a, b) => b.threshold - a.threshold);
-        return sorted.find(m => progress >= m.threshold);
-    };
-
-    // Filter active vs past challenges
-    const now = new Date();
-    const activeChallenges = challenges.filter(c => new Date(c.endDate) >= now);
-    const pastChallenges = challenges.filter(c => new Date(c.endDate) < now);
-
-    if (children.length === 0) {
-        return (
-            <div className="text-center py-16">
-                <div className="text-6xl mb-4">👶</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
-                <p className="text-sm text-gray-400">Set up your family in Settings to join challenges</p>
-            </div>
-        );
-    }
-
-    return (
-        <div>
-            <button 
-                className="w-full bg-green-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-green-700 transition-all mb-5"
-                onClick={onCreateChallenge}
-            >
-                🏆 Create Read-a-Thon Challenge
-            </button>
-
-            {/* Active Challenges */}
-            {activeChallenges.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Active Challenges</h3>
-                    {activeChallenges.map(challenge => (
-                        <ChallengeCard
-                            key={challenge.id}
-                            challenge={challenge}
-                            children={children}
-                            calculateProgress={calculateProgress}
-                            onJoinChallenge={onJoinChallenge}
-                            onLeaveChallenge={onLeaveChallenge}
-                            onViewDetails={() => setSelectedChallenge(challenge)}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Past Challenges */}
-            {pastChallenges.length > 0 && (
-                <div>
-                    <h3 className="text-lg font-semibold mb-3 text-gray-500">Past Challenges</h3>
-                    {pastChallenges.map(challenge => (
-                        <ChallengeCard
-                            key={challenge.id}
-                            challenge={challenge}
-                            children={children}
-                            calculateProgress={calculateProgress}
-                            isPast={true}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {challenges.length === 0 && (
-                <div className="text-center py-16 text-gray-400">
-                    <div className="text-6xl mb-4">🏆</div>
-                    <h3 className="text-lg text-gray-600 mb-2">No challenges yet</h3>
-                    <p className="text-sm">Create a read-a-thon to get started!</p>
-                </div>
-            )}
-
-            {/* Challenge Details Modal */}
-            {selectedChallenge && (
-                <ChallengeDetailsModal
-                    challenge={selectedChallenge}
-                    children={children}
-                    logs={logs}
-                    calculateProgress={calculateProgress}
-                    onClose={() => setSelectedChallenge(null)}
-                />
-            )}
-        </div>
-    );
-}
-
-// Challenge Card Component
-function ChallengeCard({ challenge, children, calculateProgress, onJoinChallenge, onLeaveChallenge, onViewDetails, isPast }) {
-    const daysLeft = Math.ceil((new Date(challenge.endDate) - new Date()) / (1000 * 60 * 60 * 24));
-    const hasEnded = daysLeft < 0;
-
-    return (
-        <div className="bg-white border-2 border-green-200 rounded-xl p-4 mb-3 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-                <div>
-                    <h4 className="font-semibold text-gray-800 text-lg">{challenge.name}</h4>
-                    <p className="text-sm text-gray-600">
-                        {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}
-                    </p>
-                </div>
-                {!hasEnded && !isPast && (
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                        {daysLeft} days left
-                    </span>
-                )}
-                {hasEnded && (
-                    <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                        Ended
-                    </span>
-                )}
-            </div>
-
-            <div className="mb-3 p-3 bg-green-50 rounded-lg">
-                <div className="text-sm font-medium text-green-900">
-                    Goal: {challenge.goalTarget} {challenge.goalType}
-                </div>
-            </div>
-
-            {/* Show participating children */}
-            {children.map(child => {
-                const isParticipating = challenge.participants?.some(p => p.childId === child.id);
-                const progressData = isParticipating ? calculateProgress(challenge, child.id) : null;
-
-                return (
-                    <div key={child.id} className="mb-2 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-800">{child.name}</span>
-                            {!isPast && (
-                                isParticipating ? (
-                                    <button
-                                        onClick={() => onLeaveChallenge(challenge.id, child.id)}
-                                        className="text-xs text-red-600 hover:text-red-800 font-medium"
-                                    >
-                                        Leave Challenge
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => onJoinChallenge(challenge.id, child.id)}
-                                        className="text-xs text-green-600 hover:text-green-800 font-medium"
-                                    >
-                                        + Join Challenge
-                                    </button>
-                                )
-                            )}
-                        </div>
-
-                        {progressData && (
-                            <div>
-                                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                                    <span>{progressData.current} of {challenge.goalTarget} {challenge.goalType}</span>
-                                    <span className="font-semibold">{progressData.progress}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                    <div 
-                                        className="bg-green-500 h-full transition-all duration-500"
-                                        style={{ width: `${progressData.progress}%` }}
-                                    />
-                                </div>
-                                {progressData.milestone && (
-                                    <div className="mt-1 text-xs font-medium text-green-700">
-                                        {progressData.milestone.icon} {progressData.milestone.name}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                );
-            })}
-
-            {onViewDetails && (
-                <button
-                    onClick={onViewDetails}
-                    className="w-full mt-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-                >
-                    View Leaderboard & Details
-                </button>
-            )}
-        </div>
-    );
-}
-
-// Create Challenge Modal Component
-function CreateChallengeModal({ onClose, onCreate }) {
-    const [name, setName] = useState('');
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState('');
-    const [goalType, setGoalType] = useState('books');
-    const [goalTarget, setGoalTarget] = useState(20);
-    const [addMilestones, setAddMilestones] = useState(true);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        
-        const milestones = addMilestones ? [
-            { threshold: 33, name: 'Bronze Medal', icon: '🥉' },
-            { threshold: 66, name: 'Silver Medal', icon: '🥈' },
-            { threshold: 100, name: 'Gold Medal', icon: '🥇' }
-        ] : [];
-
-        onCreate({
-            name,
-            startDate,
-            endDate,
-            goalType,
-            goalTarget: parseInt(goalTarget),
-            milestones
-        });
-    };
-
-    // Quick templates
-    const templates = [
-        { name: 'February Read-a-Thon', days: 28, goalType: 'books', goalTarget: 20 },
-        { name: 'Summer Reading Challenge', days: 90, goalType: 'minutes', goalTarget: 1000 },
-        { name: '100 Days of Reading', days: 100, goalType: 'days', goalTarget: 100 },
-        { name: 'March Reading Month', days: 31, goalType: 'books', goalTarget: 25 }
-    ];
-
-    const useTemplate = (template) => {
-        setName(template.name);
-        const end = new Date();
-        end.setDate(end.getDate() + template.days);
-        setEndDate(end.toISOString().split('T')[0]);
-        setGoalType(template.goalType);
-        setGoalTarget(template.goalTarget);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    🏆 Create Read-a-Thon Challenge
-                </h2>
-
-                {/* Quick Templates */}
-                <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Quick Templates:</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {templates.map(template => (
-                            <button
-                                key={template.name}
-                                type="button"
-                                onClick={() => useTemplate(template)}
-                                className="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-sm font-medium rounded-lg transition-colors text-left"
-                            >
-                                {template.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Challenge Name *</label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., February Read-a-Thon"
-                            required
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                            <input
-                                type="date"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">End Date *</label>
-                            <input
-                                type="date"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                min={startDate}
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Goal Type *</label>
-                        <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={goalType}
-                            onChange={(e) => setGoalType(e.target.value)}
-                        >
-                            <option value="books">Books Read</option>
-                            <option value="minutes">Minutes Read</option>
-                            <option value="days">Days Read</option>
-                        </select>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Goal Target * ({goalType === 'books' ? 'number of books' : goalType === 'minutes' ? 'total minutes' : 'number of days'})
-                        </label>
-                        <input
-                            type="number"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={goalTarget}
-                            onChange={(e) => setGoalTarget(e.target.value)}
-                            min="1"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-5">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={addMilestones}
-                                onChange={(e) => setAddMilestones(e.target.checked)}
-                                className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                                Add milestones (Bronze 🥉 Silver 🥈 Gold 🥇)
-                            </span>
-                        </label>
-                    </div>
-
-                    <button type="submit" className="w-full bg-green-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-green-700 transition-all mb-2">
-                        Create Challenge
-                    </button>
-                    <button 
-                        type="button" 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Challenge Details Modal with Leaderboard
-function ChallengeDetailsModal({ challenge, children, logs, calculateProgress, onClose }) {
-    // Calculate leaderboard
-    const leaderboard = children
-        .map(child => {
-            const progressData = calculateProgress(challenge, child.id);
-            if (!progressData) return null;
-            
-            const participant = challenge.participants?.find(p => p.childId === child.id);
-            if (!participant || !participant.showOnLeaderboard) return null;
-
-            return {
-                name: child.name,
-                ...progressData
-            };
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.current - a.current);
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-3 text-gray-800">
-                    {challenge.name}
-                </h2>
-                <p className="text-sm text-gray-600 mb-5">
-                    {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}
-                </p>
-
-                <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="text-sm font-medium text-green-900 mb-1">Challenge Goal</div>
-                    <div className="text-2xl font-bold text-green-700">
-                        {challenge.goalTarget} {challenge.goalType}
-                    </div>
-                </div>
-
-                {leaderboard.length > 0 ? (
-                    <div>
-                        <h3 className="text-lg font-semibold mb-3">🏆 Leaderboard</h3>
-                        <div className="space-y-2">
-                            {leaderboard.map((entry, index) => (
-                                <div key={index} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl font-bold text-gray-400">
-                                            #{index + 1}
-                                        </span>
-                                        <div>
-                                            <div className="font-medium text-gray-800">{entry.name}</div>
-                                            <div className="text-sm text-gray-600">
-                                                {entry.current} {challenge.goalType}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-lg font-bold text-green-600">{entry.progress}%</div>
-                                        {entry.milestone && (
-                                            <div className="text-sm">{entry.milestone.icon}</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center py-8 text-gray-400">
-                        <p className="text-sm">No participants yet</p>
-                    </div>
-                )}
-
-                <button 
-                    type="button" 
-                    className="w-full mt-5 bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                    onClick={onClose}
-                >
-                    Close
-                </button>
-            </div>
-        </div>
-    );
-}
-
-// Join Class Modal Component
-function JoinClassModal({ children, onClose, onJoin }) {
-    const [joinCode, setJoinCode] = useState('');
-    const [selectedChild, setSelectedChild] = useState('');
-    const [parentConsent, setParentConsent] = useState(false);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!parentConsent) {
-            alert('Please consent to share progress with the teacher.');
-            return;
-        }
-        const success = onJoin(joinCode.trim(), selectedChild, parentConsent);
-        if (success) {
-            alert('Successfully joined class group!');
-        }
-    };
-
-    if (children.length === 0) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-                <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                    <h2 className="text-xl font-semibold mb-3 text-gray-800">Add a Child First</h2>
-                    <p className="text-gray-600 mb-5">You need to add at least one child before joining a class group.</p>
-                    <button 
-                        className="w-full bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300"
-                        onClick={onClose}
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    👥 Join Class Group
-                </h2>
-
-                <div className="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm font-medium text-blue-900 mb-2">
-                        How to join:
-                    </div>
-                    <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                        <li>Get the class code from your teacher</li>
-                        <li>Enter it below</li>
-                        <li>Select your child</li>
-                        <li>Give consent to share progress</li>
-                    </ol>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Class Join Code *
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono uppercase"
-                            value={joinCode}
-                            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                            placeholder="ABC123"
-                            maxLength={6}
-                            required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                            Enter the 6-character code from your teacher
-                        </p>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Child *
-                        </label>
-                        <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            value={selectedChild}
-                            onChange={(e) => setSelectedChild(e.target.value)}
-                            required
-                        >
-                            <option value="">Choose a child...</option>
-                            {children.map(child => (
-                                <option key={child.id} value={child.id}>
-                                    {child.name} {child.grade ? `(Grade ${child.grade})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="mb-5 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <label className="flex items-start gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={parentConsent}
-                                onChange={(e) => setParentConsent(e.target.checked)}
-                                className="mt-1 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">
-                                <strong>I consent</strong> to share my child's reading progress (books read, minutes, goal completion) with their teacher. The teacher will see aggregate class stats and individual progress if I opt to show on leaderboards.
-                            </span>
-                        </label>
-                    </div>
-
-                    <button 
-                        type="submit" 
-                        className="w-full bg-blue-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-blue-700 transition-all mb-2"
-                    >
-                        Join Class Group
-                    </button>
-                    <button 
-                        type="button" 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Create Class Modal Component (For Teachers)
-function CreateClassModal({ onClose, onCreate }) {
-    const [teacherName, setTeacherName] = useState('');
-    const [grade, setGrade] = useState('');
-    const [school, setSchool] = useState('');
-    const [createdCode, setCreatedCode] = useState(null);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const code = onCreate({
-            teacherName,
-            grade,
-            school
-        });
-        setCreatedCode(code);
-    };
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(createdCode);
-        alert('Join code copied to clipboard!');
-    };
-
-    const getShareMessage = () => {
-        return `Join our class reading group!\n\nClass: ${teacherName}'s ${grade}\nSchool: ${school}\n\nJoin Code: ${createdCode}\n\nDownload the Kids Reading Log app and use this code to join our class group. Track your child's reading and see class progress!`;
-    };
-
-    const copyShareMessage = () => {
-        navigator.clipboard.writeText(getShareMessage());
-        alert('Message copied! Paste this into your email or class newsletter.');
-    };
-
-    if (createdCode) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-                <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                    <h2 className="text-xl font-semibold mb-3 text-gray-800">
-                        ✅ Class Group Created!
-                    </h2>
-
-                    <div className="mb-5 p-6 bg-green-50 border-2 border-green-200 rounded-xl text-center">
-                        <div className="text-sm font-medium text-green-900 mb-2">
-                            Your Class Join Code
-                        </div>
-                        <div className="text-4xl font-bold font-mono text-green-700 mb-3 tracking-wider">
-                            {createdCode}
-                        </div>
+                    <div className="flex gap-3">
                         <button
-                            onClick={copyToClipboard}
-                            className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-all"
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-medium"
                         >
-                            📋 Copy Code
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium"
+                        >
+                            Save Goal
                         </button>
                     </div>
-
-                    <div className="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-sm font-medium text-blue-900 mb-2">
-                            Share with Parents:
-                        </div>
-                        <div className="text-sm text-blue-700 mb-3 whitespace-pre-line bg-white p-3 rounded border border-blue-200">
-                            {getShareMessage()}
-                        </div>
-                        <button
-                            onClick={copyShareMessage}
-                            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-all"
-                        >
-                            📧 Copy Full Message
-                        </button>
-                    </div>
-
-                    <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
-                        <strong>💡 Tip:</strong> Bookmark this page or save your join code. You can view your class dashboard anytime to see student progress!
-                    </div>
-
-                    <button 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Done
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    🏫 Create Class Group
-                </h2>
-
-                <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="text-sm font-medium text-green-900 mb-2">
-                        For Teachers:
-                    </div>
-                    <ul className="text-sm text-green-700 space-y-1">
-                        <li>✓ Free for all teachers</li>
-                        <li>✓ Get a simple join code</li>
-                        <li>✓ Parents join with the code</li>
-                        <li>✓ See class reading progress</li>
-                        <li>✓ No login required</li>
-                    </ul>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Teacher Name *
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={teacherName}
-                            onChange={(e) => setTeacherName(e.target.value)}
-                            placeholder="Mrs. Johnson"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Grade/Class *
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={grade}
-                            onChange={(e) => setGrade(e.target.value)}
-                            placeholder="2nd Grade"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-5">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            School Name *
-                        </label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                            value={school}
-                            onChange={(e) => setSchool(e.target.value)}
-                            placeholder="Lincoln Elementary"
-                            required
-                        />
-                    </div>
-
-                    <button 
-                        type="submit" 
-                        className="w-full bg-green-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-green-700 transition-all mb-2"
-                    >
-                        Create Class & Get Join Code
-                    </button>
-                    <button 
-                        type="button" 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
                 </form>
             </div>
         </div>
     );
 }
 
-// Goals View Component
-function GoalsView({ children, goals, logs, challenges, onCreateGoal, onCompleteGoal, onDeleteGoal, onOpenSettings, familyProfile }) {
-    const babyEmoji = familyProfile?.babyEmoji || '👶';
-    
-    if (children.length === 0) {
-        return (
-            <div className="text-center py-16">
-                <div className="text-6xl mb-4">{babyEmoji}</div>
-                <h3 className="text-lg text-gray-600 mb-2">Add a child first</h3>
-                <p className="text-sm text-gray-400">
-                    Set up your family in{' '}
-                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
-                        Settings
-                    </button>
-                    {' '}to create goals
-                </p>
-            </div>
-        );
-    }
-
-    // Group goals by child
-    const goalsByChild = {};
-    children.forEach(child => {
-        goalsByChild[child.id] = goals.filter(g => g.childId === child.id && !g.completed);
-    });
-
-    const completedGoals = goals.filter(g => g.completed).slice(0, 5);
-
-    // Get active school read-a-thons
-    const now = new Date();
-    const activeReadathons = challenges.filter(c => new Date(c.endDate) >= now);
-
-    // Check if this is first time user
-    const isFirstTime = goals.length === 0 && activeReadathons.length === 0;
-
-    return (
-        <div>
-            {isFirstTime && (
-                <div className="mb-6 p-5 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                    <h3 className="text-lg font-semibold text-blue-900 mb-2">🎯 What are Reading Goals?</h3>
-                    <p className="text-sm text-blue-700 mb-3">
-                        Reading goals are what you and your child are working on together - like "read a chapter book" or "read every night this week."
-                    </p>
-                    <p className="text-sm text-blue-700">
-                        Set a goal, track progress, and celebrate when you complete it!
-                    </p>
-                </div>
-            )}
-
-            <button 
-                className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-5"
-                onClick={onCreateGoal}
-            >
-                + Set New Goal
-            </button>
-
-            {/* Active Goals by Child */}
-            {children.map(child => {
-                const childGoals = goalsByChild[child.id] || [];
-                if (childGoals.length === 0) return null;
-
-                return (
-                    <div key={child.id} className="mb-6">
-                        <h3 className="text-lg font-semibold mb-3">{child.name}'s Goals</h3>
-                        {childGoals.map(goal => (
-                            <GoalCard
-                                key={goal.id}
-                                goal={goal}
-                                child={child}
-                                logs={logs}
-                                onComplete={() => onCompleteGoal(goal.id)}
-                                onDelete={() => onDeleteGoal(goal.id)}
-                            />
-                        ))}
-                    </div>
-                );
-            })}
-
-            {goals.filter(g => !g.completed).length === 0 && !isFirstTime && (
-                <div className="text-center py-12 text-gray-400">
-                    <div className="text-5xl mb-3">📖</div>
-                    <p className="text-sm">No active goals. Set one to get started!</p>
-                </div>
-            )}
-
-            {/* School Read-a-Thons Section */}
-            {activeReadathons.length > 0 && (
-                <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-3">School Read-a-Thons</h3>
-                    <p className="text-sm text-gray-600 mb-3">
-                        These are school-wide events created by teachers.
-                    </p>
-                    {activeReadathons.map(challenge => {
-                        const childInChallenge = challenge.participants?.find(p => 
-                            children.some(c => c.id === p.childId)
-                        );
-                        if (!childInChallenge) return null;
-
-                        const child = children.find(c => c.id === childInChallenge.childId);
-                        return (
-                            <div key={challenge.id} className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-3">
-                                <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                        <div className="font-semibold text-gray-800">{challenge.name}</div>
-                                        <div className="text-sm text-gray-600">{child?.name}</div>
-                                    </div>
-                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                                        School Event
-                                    </span>
-                                </div>
-                                <div className="text-sm text-gray-600 mb-2">
-                                    Goal: {challenge.goalTarget} {challenge.goalType}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                    Ends: {new Date(challenge.endDate).toLocaleDateString()}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* Completed Goals */}
-            {completedGoals.length > 0 && (
-                <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-500">Recently Completed</h3>
-                    {completedGoals.map(goal => {
-                        const child = children.find(c => c.id === goal.childId);
-                        return (
-                            <div key={goal.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-2 opacity-70">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <div className="font-medium text-gray-700">✓ {goal.name}</div>
-                                        <div className="text-sm text-gray-600">{child?.name}</div>
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                        {new Date(goal.completedDate).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// Goal Card Component
-function GoalCard({ goal, child, logs, onComplete, onDelete }) {
-    // Calculate progress if measurable
-    let progressData = null;
-    
-    if (goal.goalType !== 'completion') {
-        const goalLogs = logs.filter(log => {
-            const logDate = new Date(log.date);
-            const goalStart = new Date(goal.createdDate);
-            const goalEnd = goal.endDate ? new Date(goal.endDate) : new Date();
-            return log.childId === child.id && logDate >= goalStart && logDate <= goalEnd;
-        });
-
-        let current = 0;
-        if (goal.goalType === 'books') {
-            current = new Set(goalLogs.map(l => l.bookTitle)).size;
-        } else if (goal.goalType === 'minutes') {
-            current = goalLogs.reduce((sum, l) => sum + l.minutes, 0);
-        } else if (goal.goalType === 'days') {
-            current = new Set(goalLogs.map(l => l.date)).size;
-        }
-
-        const progress = Math.min(100, Math.round((current / goal.goalTarget) * 100));
-        progressData = { current, progress };
-    }
-
-    return (
-        <div className="bg-white border-2 border-purple-200 rounded-xl p-4 mb-3 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-                <div>
-                    <h4 className="font-semibold text-gray-800 text-lg">📖 {goal.name}</h4>
-                    <p className="text-sm text-gray-600">
-                        Started: {new Date(goal.createdDate).toLocaleDateString()}
-                    </p>
-                </div>
-                <button
-                    onClick={onDelete}
-                    className="text-red-500 hover:text-red-700 text-sm px-2 py-1"
-                >
-                    Delete
-                </button>
-            </div>
-
-            {goal.description && (
-                <p className="text-sm text-gray-600 mb-3">{goal.description}</p>
-            )}
-
-            {progressData ? (
-                <div className="mb-3">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>{progressData.current} of {goal.goalTarget} {goal.goalType}</span>
-                        <span className="font-semibold">{progressData.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div 
-                            className="bg-purple-600 h-full transition-all duration-500"
-                            style={{ width: `${progressData.progress}%` }}
-                        />
-                    </div>
-                </div>
-            ) : (
-                <div className="mb-3 text-sm text-gray-600">
-                    Working on it together...
-                </div>
-            )}
-
-            {goal.currentBook && (
-                <div className="text-sm text-gray-600 mb-3">
-                    Currently reading: <span className="font-medium">{goal.currentBook}</span>
-                </div>
-            )}
-
-            <button
-                onClick={onComplete}
-                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all"
-            >
-                ✓ Mark Complete
-            </button>
-        </div>
-    );
-}
-
-// Create Goal Modal Component
-function CreateGoalModal({ children, onClose, onCreate }) {
-    const [selectedChildId, setSelectedChildId] = useState(children[0]?.id || '');
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [goalType, setGoalType] = useState('completion');
-    const [goalTarget, setGoalTarget] = useState(1);
-    const [endDate, setEndDate] = useState('');
-    const [currentBook, setCurrentBook] = useState('');
-
-    const selectedChild = children.find(c => c.id === selectedChildId);
-
-    // Age-appropriate templates
-    const getTemplates = () => {
-        const childType = selectedChild?.childType || 'student';
-
-        const templates = {
-            baby: [
-                { name: 'Read to baby 10 minutes daily', goalType: 'completion' },
-                { name: 'Read 5 board books this week', goalType: 'books', goalTarget: 5 },
-                { name: 'Try touch-and-feel books', goalType: 'completion' },
-                { name: 'Read the same book 3 times', goalType: 'completion' }
-            ],
-            toddler: [
-                { name: 'Read together every night this week', goalType: 'days', goalTarget: 7 },
-                { name: 'Try 5 different picture books', goalType: 'books', goalTarget: 5 },
-                { name: 'Let them pick the book tonight', goalType: 'completion' },
-                { name: 'Read a book about animals', goalType: 'completion' }
-            ],
-            preschool: [
-                { name: 'Read together every night', goalType: 'days', goalTarget: 7 },
-                { name: 'Try 5 new books this month', goalType: 'books', goalTarget: 5 },
-                { name: 'Read a book about letters', goalType: 'completion' },
-                { name: 'Read books about numbers', goalType: 'completion' }
-            ],
-            student: [
-                { name: 'Read a chapter book', goalType: 'completion' },
-                { name: 'Read 10 books this month', goalType: 'books', goalTarget: 10 },
-                { name: 'Try a new genre', goalType: 'completion' },
-                { name: 'Finish a book series', goalType: 'completion' },
-                { name: 'Read 15 minutes daily', goalType: 'days', goalTarget: 30 }
-            ],
-            homeschool: [
-                { name: 'Read a chapter book', goalType: 'completion' },
-                { name: 'Read a biography', goalType: 'completion' },
-                { name: 'Read across 3 subjects', goalType: 'completion' },
-                { name: 'Complete a literature unit', goalType: 'completion' },
-                { name: 'Read 20 pages of history daily', goalType: 'days', goalTarget: 30 }
-            ]
-        };
-
-        return templates[childType] || templates.student;
-    };
-
-    const useTemplate = (template) => {
-        setName(template.name);
-        setGoalType(template.goalType);
-        if (template.goalTarget) {
-            setGoalTarget(template.goalTarget);
-        }
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onCreate({
-            childId: selectedChildId,
-            name: name.trim(),
-            description: description.trim(),
-            goalType,
-            goalTarget: goalType === 'completion' ? null : parseInt(goalTarget),
-            endDate: endDate || null,
-            currentBook: currentBook.trim() || null
-        });
-    };
-
-    if (children.length === 0) {
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-                <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                    <h2 className="text-xl font-semibold mb-3 text-gray-800">Add a Child First</h2>
-                    <p className="text-gray-600 mb-5">You need to add at least one child before setting a reading goal.</p>
-                    <button 
-                        className="w-full bg-gray-200 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-300"
-                        onClick={onClose}
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    Set a Reading Goal
-                </h2>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Goal for: *</label>
-                        <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            value={selectedChildId}
-                            onChange={(e) => setSelectedChildId(e.target.value)}
-                            required
-                        >
-                            {children.map(child => (
-                                <option key={child.id} value={child.id}>
-                                    {child.name} {child.grade ? `(Grade ${child.grade})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Quick Templates */}
-                    <div className="mb-5">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Quick Ideas:</label>
-                        <div className="grid grid-cols-1 gap-2">
-                            {getTemplates().map((template, idx) => (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => useTemplate(template)}
-                                    className="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-sm text-left rounded-lg transition-colors border border-purple-200"
-                                >
-                                    {template.name}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">What's the goal? *</label>
-                        <input
-                            type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g., Read a chapter book together"
-                            required
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Additional notes (optional)</label>
-                        <textarea
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Any details or reminders..."
-                            rows={2}
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Tracking type</label>
-                        <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            value={goalType}
-                            onChange={(e) => setGoalType(e.target.value)}
-                        >
-                            <option value="completion">Simple goal (mark complete when done)</option>
-                            <option value="books">Number of books</option>
-                            <option value="minutes">Number of minutes</option>
-                            <option value="days">Number of days</option>
-                        </select>
-                    </div>
-
-                    {goalType !== 'completion' && (
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Target</label>
-                            <input
-                                type="number"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                value={goalTarget}
-                                onChange={(e) => setGoalTarget(e.target.value)}
-                                min="1"
-                            />
-                        </div>
-                    )}
-
-                    {goalType === 'completion' && (
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Currently reading (optional)</label>
-                            <input
-                                type="text"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                value={currentBook}
-                                onChange={(e) => setCurrentBook(e.target.value)}
-                                placeholder="e.g., Charlotte's Web"
-                            />
-                        </div>
-                    )}
-
-                    <div className="mb-5">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">End date (optional)</label>
-                        <input
-                            type="date"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                        />
-                    </div>
-
-                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
-                        Set Goal
-                    </button>
-                    <button 
-                        type="button" 
-                        className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-// Onboarding Modal - Multi-step welcome flow for new users
 function OnboardingModal({ onComplete, onSkip }) {
     const [step, setStep] = useState(1);
     const [familyName, setFamilyName] = useState('');
-    const [kids, setKids] = useState([{ name: '', ageGroup: 'student', grade: '', favoriteGenres: [] }]);
+    const [kids, setKids] = useState([{ name: '', ageGroup: 'early_reader', grade: '', favoriteGenres: [] }]);
     const [readingTime, setReadingTime] = useState('');
     const [library, setLibrary] = useState('');
     const [readingGoal, setReadingGoal] = useState('');
@@ -5068,8 +3127,17 @@ function OnboardingModal({ onComplete, onSkip }) {
         '🦖 Non-Fiction', '🧪 Science', '🏰 Fairy Tales', '🎨 Art & Crafts'
     ];
 
+    const readingStages = [
+        { value: 'baby', label: '👶 Baby (0-1)' },
+        { value: 'toddler', label: '🧸 Toddler (1-3)' },
+        { value: 'early_reader', label: '📖 Early Reader (3-5)' },
+        { value: 'independent', label: '📚 Independent (6-8)' },
+        { value: 'student', label: '🎒 Student (9+)' },
+        { value: 'homeschool', label: '🏠 Homeschool' }
+    ];
+
     const addKid = () => {
-        setKids([...kids, { name: '', ageGroup: 'student', grade: '', favoriteGenres: [] }]);
+        setKids([...kids, { name: '', ageGroup: 'early_reader', grade: '', favoriteGenres: [] }]);
     };
 
     const updateKid = (index, field, value) => {
@@ -5080,11 +3148,11 @@ function OnboardingModal({ onComplete, onSkip }) {
 
     const toggleGenre = (index, genre) => {
         const newKids = [...kids];
-        const genres = newKids[index].favoriteGenres || [];
-        if (genres.includes(genre)) {
-            newKids[index].favoriteGenres = genres.filter(g => g !== genre);
+        const g = newKids[index].favoriteGenres || [];
+        if (g.includes(genre)) {
+            newKids[index].favoriteGenres = g.filter(x => x !== genre);
         } else {
-            newKids[index].favoriteGenres = [...genres, genre];
+            newKids[index].favoriteGenres = [...g, genre];
         }
         setKids(newKids);
     };
@@ -5136,37 +3204,21 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 1: Welcome */}
                 {step === 1 && (
                     <div className="text-center">
-                        <div className="text-5xl mb-4">🔖</div>
-                        <h2 className="text-2xl font-bold text-purple-800 mb-4">The OurBookmark Story</h2>
+                        <div className="text-5xl mb-4">📖</div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Your family's reading story</h2>
+                        <p className="text-gray-500 mb-6">From first favorites to the books they outgrow — every story shared lives here.</p>
                         
-                        <div className="text-gray-600 space-y-3 text-left mb-6">
-                            <p className="font-medium text-gray-800">Every family has a reading story.</p>
-                            <p className="text-gray-600">
-                                From Goodnight Moon at 6 months<br />
-                                to Harry Potter at 10 years<br />
-                                to college reading lists at 18.<br />
-                                It's a journey worth remembering.
-                            </p>
-                            <p>
-                                OurBookmark helps you mark every moment,
-                                track every page, and bookmark the memories that matter.
-                            </p>
-                        </div>
-                        
-                        <p className="font-semibold text-purple-700 mb-6">Let's set up your family library! 🔖</p>
-                        
-                        <button
+                        <button 
                             onClick={() => setStep(2)}
-                            className="w-full bg-purple-600 text-white py-3.5 rounded-lg font-medium hover:bg-purple-700 transition-all"
+                            className="w-full bg-purple-600 text-white py-3.5 rounded-lg font-semibold hover:bg-purple-700 transition-all mb-3"
                         >
-                            Get Started
+                            Create our library
                         </button>
-                        
-                        <button
+                        <button 
                             onClick={onSkip}
-                            className="w-full mt-3 text-gray-400 text-sm hover:text-gray-600 transition-all"
+                            className="text-gray-400 text-sm hover:text-gray-600"
                         >
-                            I'll set up later
+                            Maybe later
                         </button>
                     </div>
                 )}
@@ -5174,230 +3226,166 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 2: Family Name */}
                 {step === 2 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">👨‍👩‍👧‍👦 What's your family name?</h2>
-                        <p className="text-gray-500 text-sm mb-6">We'll personalize your reading library.</p>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">What should we call your library?</h2>
+                        <p className="text-sm text-gray-500 mb-5">This is just for you — make it personal.</p>
                         
-                        <input
+                        <input 
                             type="text"
                             value={familyName}
                             onChange={(e) => setFamilyName(e.target.value)}
-                            placeholder="e.g., Smith, Johnson, Garcia"
-                            className="w-full p-4 border-2 border-gray-200 rounded-xl text-lg focus:border-purple-500 focus:ring-0 mb-4"
+                            className="w-full p-3.5 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-6"
+                            placeholder="The Johnson Family Library"
                             autoFocus
                         />
-                        
-                        <p className="text-center text-purple-600 font-medium mb-6">
-                            🔖 {familyName || 'Your'} Family's Bookmark
-                        </p>
-                        
+
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setStep(1)}
-                                className="flex-1 py-3 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
-                            >
-                                Back
-                            </button>
-                            <button
-                                onClick={() => setStep(3)}
-                                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
-                            >
-                                Next
-                            </button>
+                            <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
+                            <button onClick={() => setStep(3)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 3: Add Kids */}
+                {/* Step 3: Who reads with you */}
                 {step === 3 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">👶 Who are your readers?</h2>
-                        <p className="text-gray-500 text-sm mb-4">Add the children you'll be tracking reading for.</p>
-                        
-                        <div className="space-y-4 mb-4 max-h-64 overflow-y-auto">
-                            {kids.map((kid, index) => (
-                                <div key={index} className="p-4 bg-purple-50 rounded-xl">
-                                    <div className="flex gap-2 mb-3">
-                                        <input
-                                            type="text"
-                                            value={kid.name}
-                                            onChange={(e) => updateKid(index, 'name', e.target.value)}
-                                            placeholder="Child's name"
-                                            className="flex-1 p-3 border border-gray-200 rounded-lg focus:border-purple-500"
-                                        />
-                                        {kids.length > 1 && (
-                                            <button
-                                                onClick={() => removeKid(index)}
-                                                className="px-3 text-red-500 hover:bg-red-50 rounded-lg"
-                                            >
-                                                ✕
-                                            </button>
-                                        )}
-                                    </div>
-                                    <select
-                                        value={kid.ageGroup}
-                                        onChange={(e) => updateKid(index, 'ageGroup', e.target.value)}
-                                        className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500 mb-2"
-                                    >
-                                        <option value="baby">👶 Baby (0-18 months)</option>
-                                        <option value="toddler">🧒 Toddler (18 mo - 3 years)</option>
-                                        <option value="preschool">🎨 Preschool (3-5 years)</option>
-                                        <option value="student">🎒 Student (K-12)</option>
-                                        <option value="homeschool">🏠 Homeschool Student</option>
-                                    </select>
-                                    {(kid.ageGroup === 'student' || kid.ageGroup === 'homeschool') && (
-                                        <input
-                                            type="text"
-                                            value={kid.grade || ''}
-                                            onChange={(e) => updateKid(index, 'grade', e.target.value)}
-                                            placeholder="Grade (e.g., K, 1st, 5th)"
-                                            className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500"
-                                        />
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">Who reads with you?</h2>
+                        <p className="text-sm text-gray-500 mb-5">Add each reader in your family.</p>
+
+                        {kids.map((kid, index) => (
+                            <div key={index} className="mb-4 p-4 bg-gray-50 rounded-xl">
+                                <div className="flex justify-between items-center mb-3">
+                                    <span className="text-sm font-medium text-gray-600">Reader {index + 1}</span>
+                                    {kids.length > 1 && (
+                                        <button onClick={() => removeKid(index)} className="text-xs text-gray-400 hover:text-gray-600">Remove</button>
                                     )}
                                 </div>
-                            ))}
-                        </div>
-                        
-                        <button
-                            onClick={addKid}
-                            className="w-full py-2 border-2 border-dashed border-purple-300 rounded-lg text-purple-600 font-medium hover:bg-purple-50 mb-4"
-                        >
-                            + Add Another Child
-                        </button>
-                        
+                                <input 
+                                    type="text"
+                                    value={kid.name}
+                                    onChange={(e) => updateKid(index, 'name', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    placeholder="Reader's name"
+                                    autoFocus={index === 0}
+                                />
+                                <select 
+                                    value={kid.ageGroup}
+                                    onChange={(e) => updateKid(index, 'ageGroup', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg mb-2 text-sm"
+                                >
+                                    {readingStages.map(s => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
+                                    ))}
+                                </select>
+                                {(kid.ageGroup === 'student' || kid.ageGroup === 'homeschool') && (
+                                    <input 
+                                        type="text"
+                                        value={kid.grade || ''}
+                                        onChange={(e) => updateKid(index, 'grade', e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg text-sm"
+                                        placeholder="Grade (optional)"
+                                    />
+                                )}
+                            </div>
+                        ))}
+
+                        <button onClick={addKid} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-purple-400 mb-5">+ Add another reader</button>
+
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setStep(2)}
-                                className="flex-1 py-3 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
-                            >
-                                Back
-                            </button>
-                            <button
-                                onClick={() => setStep(4)}
-                                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
-                            >
-                                Next
-                            </button>
+                            <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
+                            <button onClick={() => setStep(4)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 4: Reading Interests */}
+                {/* Step 4: What stories do they love (optional) */}
                 {step === 4 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">📚 What do they love reading?</h2>
-                        <p className="text-gray-500 text-sm mb-4">Select favorite genres for each child (optional).</p>
-                        
-                        <div className="space-y-4 mb-4 max-h-64 overflow-y-auto">
-                            {kids.map((kid, index) => (
-                                kid.name.trim() ? (
-                                    <div key={index} className="p-4 bg-gray-50 rounded-xl">
-                                        <p className="font-medium text-gray-800 mb-3">{kid.name}'s favorites:</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {genres.map(genre => (
-                                                <button
-                                                    key={genre}
-                                                    type="button"
-                                                    onClick={() => toggleGenre(index, genre)}
-                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                                                        (kid.favoriteGenres || []).includes(genre)
-                                                            ? 'bg-purple-600 text-white'
-                                                            : 'bg-white border border-gray-200 text-gray-600 hover:border-purple-300'
-                                                    }`}
-                                                >
-                                                    {genre}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : null
-                            ))}
-                        </div>
-                        
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setStep(3)}
-                                className="flex-1 py-3 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
-                            >
-                                Back
-                            </button>
-                            <button
-                                onClick={() => setStep(5)}
-                                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
-                            >
-                                Next
-                            </button>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">What kinds of stories do they love?</h2>
+                        <p className="text-sm text-gray-500 mb-5">Pick a few — we'll suggest books. (Optional)</p>
+
+                        {kids.filter(k => k.name.trim()).map((kid, index) => (
+                            <div key={index} className="mb-4">
+                                {kids.filter(k => k.name.trim()).length > 1 && (
+                                    <div className="text-sm font-medium text-gray-700 mb-2">{kid.name}</div>
+                                )}
+                                <div className="flex flex-wrap gap-2">
+                                    {genres.map(genre => (
+                                        <button 
+                                            key={genre}
+                                            onClick={() => toggleGenre(index, genre)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                                                (kid.favoriteGenres || []).includes(genre) 
+                                                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                                    : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                                            }`}
+                                        >
+                                            {genre}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+
+                        <div className="flex gap-3 mt-5">
+                            <button onClick={() => setStep(3)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
+                            <button onClick={() => setStep(5)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
                         </div>
                     </div>
                 )}
 
-                {/* Step 5: Reading Habits & Library */}
+                {/* Step 5: Reading routine */}
                 {step === 5 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">🌙 A few more things...</h2>
-                        <p className="text-gray-500 text-sm mb-4">Help us personalize your experience (all optional).</p>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2">When do stories usually happen?</h2>
+                        <p className="text-sm text-gray-500 mb-5">No pressure — just helps us personalize.</p>
                         
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    When do you usually read together?
-                                </label>
-                                <select
-                                    value={readingTime}
-                                    onChange={(e) => setReadingTime(e.target.value)}
-                                    className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500"
+                        <div className="space-y-2 mb-6">
+                            {['🌙 Bedtime', '☀️ Morning', '📚 After school', '🎲 Whenever we can'].map(time => (
+                                <button
+                                    key={time}
+                                    onClick={() => setReadingTime(time)}
+                                    className={`w-full p-3.5 rounded-xl text-left text-sm font-medium transition-all ${
+                                        readingTime === time 
+                                            ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                            : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                                    }`}
                                 >
-                                    <option value="">Select a time...</option>
-                                    <option value="morning">🌅 Morning</option>
-                                    <option value="afternoon">☀️ Afternoon</option>
-                                    <option value="bedtime">🌙 Bedtime</option>
-                                    <option value="varies">🔄 It varies</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    What's your reading goal?
-                                </label>
-                                <select
-                                    value={readingGoal}
-                                    onChange={(e) => setReadingGoal(e.target.value)}
-                                    className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500"
-                                >
-                                    <option value="">Select a goal...</option>
-                                    <option value="habit">📆 Build a daily reading habit</option>
-                                    <option value="school">🏫 Meet school reading requirements</option>
-                                    <option value="fun">🎉 Just for fun!</option>
-                                    <option value="challenge">🏆 Reading challenges & competitions</option>
-                                    <option value="homeschool">📝 Homeschool documentation</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    🏛️ Your local library (optional)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={library}
-                                    onChange={(e) => setLibrary(e.target.value)}
-                                    placeholder="e.g., Main Street Public Library"
-                                    className="w-full p-3 border border-gray-200 rounded-lg focus:border-purple-500"
-                                />
+                                    {time}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">What matters most right now?</label>
+                            <div className="space-y-2">
+                                {[
+                                    { val: 'habit', label: '📅 Building a daily habit' },
+                                    { val: 'bedtime', label: '🌙 Making bedtime special' },
+                                    { val: 'independence', label: '📖 Growing independent readers' },
+                                    { val: 'enjoy', label: '❤️ Just enjoying books together' }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.val}
+                                        onClick={() => setReadingGoal(opt.val)}
+                                        className={`w-full p-3.5 rounded-xl text-left text-sm font-medium transition-all ${
+                                            readingGoal === opt.val 
+                                                ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                                : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:border-gray-300'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                        
+
                         <div className="flex gap-3">
-                            <button
-                                onClick={() => setStep(4)}
-                                className="flex-1 py-3 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-50"
-                            >
-                                Back
-                            </button>
-                            <button
+                            <button onClick={() => setStep(4)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
+                            <button 
                                 onClick={handleComplete}
-                                className="flex-1 bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
+                                className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700"
                             >
-                                🎉 Start Reading!
+                                Open our library
                             </button>
                         </div>
                     </div>
@@ -5407,7 +3395,7 @@ function OnboardingModal({ onComplete, onSkip }) {
     );
 }
 
-// Settings Modal - Manage family, kids, backup/restore
+// Reading Home — A place for your family's reading life
 function SettingsModal({ 
     familyProfile, 
     setFamilyProfile, 
@@ -5421,285 +3409,188 @@ function SettingsModal({
     onClose,
     user,
     onSignOut,
-    onSignIn
+    onSignIn,
+    onShareCard,
+    onGenerateReport
 }) {
-    const [activeTab, setActiveTab] = useState('family');
-    const [importing, setImporting] = useState(false);
     const [editingFamily, setEditingFamily] = useState(false);
     const [familyName, setFamilyName] = useState(familyProfile?.familyName || '');
     const [editingChild, setEditingChild] = useState(null);
+    const [showArchived, setShowArchived] = useState(false);
 
-    const handleFileSelect = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    const activeChildren = children.filter(c => !c.archived);
+    const archivedChildren = children.filter(c => c.archived);
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const success = onImport(event.target.result);
-            if (success) {
-                setImporting(false);
-            }
-        };
-        reader.readAsText(file);
+    const getChildStats = (child) => {
+        const childLogs = (logs || []).filter(l => l.childId === child.id);
+        const titles = new Set(childLogs.map(l => (l.bookTitle || '').split(' by ')[0]));
+        const totalBooks = titles.size;
+        const totalMinutes = childLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        const bookCounts = {};
+        childLogs.forEach(l => {
+            const title = (l.bookTitle || '').split(' by ')[0];
+            bookCounts[title] = (bookCounts[title] || 0) + 1;
+        });
+        const sorted = Object.entries(bookCounts).sort((a, b) => b[1] - a[1]);
+        const fav = sorted[0] || null;
+        return { totalBooks, totalMinutes, hours, mins, fav };
     };
 
-    const saveFamilyName = () => {
-        setFamilyProfile({ ...familyProfile, familyName: familyName.trim() || 'My' });
-        setEditingFamily(false);
+    const getEmotionalLine = (child, stats) => {
+        if (stats.totalBooks === 0) return 'Just getting started';
+        if (stats.fav && stats.fav[1] >= 3) return 'In a reread phase';
+        if (stats.totalBooks >= 10) return 'Loves storytime';
+        if (stats.totalMinutes >= 300) return 'A devoted reader';
+        return 'Building the habit';
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
-            <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50" onClick={onClose}>
+            <div className="bg-gradient-to-b from-white to-gray-50 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b">
-                    <h2 className="text-xl font-semibold text-gray-800">⚙️ Settings</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+                <div className="p-6 pb-4 border-b border-gray-100 relative">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
+                    <div className="text-center">
+                        <h2 className="text-lg font-semibold text-gray-800">Reading Home</h2>
+                        <p className="text-sm text-purple-600 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
+                        <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
+                    </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="grid grid-cols-4 border-b">
-                    <button
-                        onClick={() => setActiveTab('family')}
-                        className={`py-3 text-sm font-medium text-center ${activeTab === 'family' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
-                    >
-                        Family
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('kids')}
-                        className={`py-3 text-sm font-medium text-center ${activeTab === 'kids' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
-                    >
-                        Kids
-                    </button>
-                   <button
-                       onClick={() => setActiveTab('account')}
-                        className={`py-3 text-sm font-medium text-center ${activeTab === 'account' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
-                    >
-                        Account
-                    </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-4 overflow-y-auto max-h-96">
-                    {/* Family Tab */}
-                    {activeTab === 'family' && (
-                        <div className="space-y-4">
-                            <div className="p-4 bg-purple-50 rounded-xl">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-gray-700">Family Name</span>
-                                    {!editingFamily && (
-                                        <button onClick={() => setEditingFamily(true)} className="text-xs text-purple-600">Edit</button>
-                                    )}
+                <div className="overflow-y-auto flex-1 p-5">
+                    {/* FAMILY SPACE */}
+                    <div className="mb-8">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Family Space</div>
+                        {editingFamily ? (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
+                                <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
+                                <div className="flex gap-2">
+                                    <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium">Save</button>
+                                    <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>
                                 </div>
-                                {editingFamily ? (
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={familyName}
-                                            onChange={(e) => setFamilyName(e.target.value)}
-                                            className="flex-1 p-2 border rounded-lg text-sm"
-                                            placeholder="Family name"
-                                        />
-                                        <button onClick={saveFamilyName} className="px-3 py-2 bg-purple-600 text-white text-sm rounded-lg">Save</button>
+                            </div>
+                        ) : (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <div className="font-medium text-gray-800">📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</div>
+                                        <div className="text-xs text-gray-500 mt-1">What matters most: building the habit</div>
+                                        <div className="text-xs text-gray-500">Your reading routine: flexible</div>
                                     </div>
-                                ) : (
-                                    <p className="text-lg font-semibold text-purple-800">{familyProfile?.familyName || 'My'} Family</p>
+                                    <button onClick={() => setEditingFamily(true)} className="text-xs text-purple-600 font-medium">Edit</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* READERS */}
+                    <div className="mb-8">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Readers</div>
+                        <div className="space-y-3">
+                            {activeChildren.map(child => {
+                                const stats = getChildStats(child);
+                                const emotionalLine = getEmotionalLine(child, stats);
+                                return (
+                                    <div key={child.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="font-semibold text-gray-800 text-base">{child.name}</div>
+                                                <div className="text-xs text-purple-600 font-medium">{emotionalLine}</div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                            <button onClick={() => setEditingChild(child)} className="text-xs text-purple-600 font-medium hover:text-purple-700">Edit</button>
+                                            <button onClick={() => onDeleteChild(child.id)} className="text-xs text-gray-400 hover:text-gray-600">Pause</button>
+                                        </div>
+                                        </div>
+                                        {stats.fav && (
+                                            <div className="text-sm text-gray-600 mb-1">Favorite: {stats.fav[0]} ({stats.fav[1]}×)</div>
+                                        )}
+                                        <div className="text-xs text-gray-400">{stats.totalBooks} book{stats.totalBooks !== 1 ? 's' : ''} · {stats.hours > 0 ? `${stats.hours}h ` : ''}{stats.mins}m reading</div>
+                                        <div className="mt-3 grid grid-cols-2 gap-2">
+                                            <button
+                                                onClick={() => onShareCard && onShareCard(child)}
+                                                disabled={!onShareCard}
+                                                className="py-2 rounded-xl bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                📤 Share
+                                            </button>
+                                            <button
+                                                onClick={() => onGenerateReport && onGenerateReport(child)}
+                                                disabled={!onGenerateReport}
+                                                className="py-2 rounded-xl bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                📄 Report
+                                            </button>
+                                        </div>
+
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <button onClick={onAddChild} className="w-full mt-3 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-all">+ Add another reader</button>
+                        
+                        {archivedChildren.length > 0 && (
+                            <div className="mt-4">
+                                <button onClick={() => setShowArchived(!showArchived)} className="text-xs text-gray-400 font-medium">{showArchived ? '▼' : '▶'} {archivedChildren.length} paused reader{archivedChildren.length !== 1 ? 's' : ''}</button>
+                                {showArchived && (
+                                    <div className="mt-2 space-y-2">
+                                        {archivedChildren.map(child => (
+                                            <div key={child.id} className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex justify-between items-center opacity-70">
+                                                <div>
+                                                    <div className="font-medium text-gray-600 text-sm">{child.name}</div>
+                                                    <div className="text-xs text-gray-400">Paused</div>
+                                                </div>
+                                                <button onClick={() => {
+                                                    const updated = children.map(c => c.id === child.id ? { ...c, archived: false } : c);
+                                                    onUpdateChild && onUpdateChild(child.id, { ...child, archived: false });
+                                                }} className="text-xs text-purple-600 font-medium">Restore</button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
+                        )}
+                    </div>
 
-                            {familyProfile?.readingTime && (
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-xs text-gray-500">Reading time: </span>
-                                    <span className="text-sm font-medium">{familyProfile.readingTime}</span>
-                                </div>
-                            )}
-
-                            {familyProfile?.readingGoal && (
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-xs text-gray-500">Goal: </span>
-                                    <span className="text-sm font-medium">{familyProfile.readingGoal}</span>
-                                </div>
-                            )}
-
-                            {familyProfile?.library && (
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-xs text-gray-500">Library: </span>
-                                    <span className="text-sm font-medium">{familyProfile.library}</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Kids Tab */}
-                    {activeTab === 'kids' && (
-                        <div className="space-y-4">
-                            <button 
-                                onClick={onAddChild}
-                                className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
-                            >
-                                ➕ Add Child
-                            </button>
-
-                            {children.length === 0 ? (
-                                <div className="text-center py-8 text-gray-400">
-                                    <div className="text-4xl mb-2">👶</div>
-                                    <p className="text-sm">No children added yet</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {children.map(child => {
-                                        // Calculate stats from logs
-                                        const childLogs = logs.filter(l => l.childId === child.id);
-                                        const totalBooks = new Set(childLogs.map(l => l.bookTitle)).size;
-                                        const totalMinutes = childLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
-
-                                        // Find favorite book (most logged)
-                                        const bookCounts = {};
-                                        childLogs.forEach(l => {
-                                            bookCounts[l.bookTitle] = (bookCounts[l.bookTitle] || 0) + 1;
-                                        });
-                                        const favBook = Object.entries(bookCounts).sort((a, b) => b[1] - a[1])[0];
-
-                                        const ageLabels = {
-                                            baby: '👶 Baby',
-                                            toddler: '🧒 Toddler',
-                                            preschool: '🎨 Preschool',
-                                            student: '🎒 Student',
-                                            homeschool: '🏠 Homeschool'
-                                        };
-
-                                        return (
-                                            <div key={child.id} className="p-4 bg-gray-50 rounded-xl">
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <div className="font-semibold text-gray-800 text-lg">{child.name}</div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {ageLabels[child.childType] || child.childType}
-                                                            {child.grade && ` · Grade ${child.grade}`}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => setEditingChild(child)}
-                                                            className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                if (confirm(`Remove ${child.name}?`)) onDeleteChild(child.id);
-                                                            }}
-                                                            className="text-xs text-red-500 hover:text-red-700"
-                                                        >
-                                                            Remove
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Reading goal */}
-                                                {child.goal && (
-                                                    <div className="text-xs text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg mb-2">
-                                                        📖 Goal: {child.goal.minutesPerDay} min/day · {child.goal.daysPerWeek} days/week
-                                                    </div>
-                                                )}
-
-                                                {/* Stats */}
-                                                {childLogs.length > 0 && (
-                                                    <div className="flex gap-3 text-xs text-gray-500 mb-2">
-                                                        <span>📚 {totalBooks} book{totalBooks !== 1 ? 's' : ''}</span>
-                                                        <span>⏱ {Math.round(totalMinutes / 60)}h {totalMinutes % 60}m total</span>
-                                                    </div>
-                                                )}
-
-                                                {/* Favorite book */}
-                                                {favBook && (
-                                                    <div className="text-xs text-gray-600">
-                                                        ❤️ Most read: <span className="font-medium">{favBook[0]}</span> ({favBook[1]}x)
-                                                    </div>
-                                                )}
-
-                                                {/* Favorite genres */}
-                                                {child.favoriteGenres?.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-2">
-                                                        {child.favoriteGenres.slice(0, 3).map(g => (
-                                                            <span key={g} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{g}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* Edit Child Modal */}
-                            {editingChild && (
-                                <EditChildModal
-                                    child={editingChild}
-                                    onClose={() => setEditingChild(null)}
-                                    onSave={(updates) => {
-                                        onUpdateChild(editingChild.id, updates);
-                                        setEditingChild(null);
-                                    }}
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    {/* Data Tab */}
-                    {/* Account Tab */}
-                    {activeTab === 'account' && (
-                        <div className="space-y-4">
-                            {user ? (
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-green-600">✓</span>
-                                            <span className="font-medium text-green-800">Signed In</span>
-                                        </div>
-                                        <p className="text-sm text-green-700">{user.email}</p>
+                    {/* YOU */}
+                    <div>
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">You</div>
+                        {user ? (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-lg">👤</div>
+                                    <div>
+                                        <div className="font-medium text-gray-800 text-sm">{user.email}</div>
+                                        <div className="text-xs text-green-600">Your library is safely saved</div>
                                     </div>
-                                    <p className="text-xs text-gray-500">
-                                        Your data is being synced to the cloud. You can access it from any device.
-                                    </p>
-                                    <button
-                                        onClick={onSignOut}
-                                        className="w-full bg-red-500 text-white py-3 rounded-lg font-medium hover:bg-red-600"
-                                    >
-                                        Sign Out
-                                    </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
-                                        <h3 className="font-medium text-purple-800 mb-2">📚 Save Your Data</h3>
-                                        <p className="text-sm text-purple-700">
-                                            Sign in to sync your reading data across all your devices and keep it safe in the cloud.
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={onSignIn}
-                                        className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700"
-                                    >
-                                        Sign In to Save Data
-                                    </button>
-                                    <p className="text-xs text-gray-400 text-center">
-                                        Your data is currently stored only in this browser.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                <button onClick={onSignOut} className="w-full py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">Log Out</button>
+                            </div>
+                        ) : (
+                            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                <p className="text-sm text-gray-600 mb-3">Sign in to save your library across devices</p>
+                                {onSignIn ? (
+                                    <button onClick={onSignIn} className="w-full py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Sign In / Sign Up</button>
+                                ) : (
+                                    <p className="text-xs text-gray-400">Your data is saved locally on this device</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t">
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300"
-                    >
-                        Close
-                    </button>
+            {editingChild && (
+                <EditChildModal
+                    child={editingChild}
+                    onClose={() => setEditingChild(null)}
+                    onSave={(updatedChild) => {
+                        onUpdateChild(updatedChild);
+                        setEditingChild(null);
+                    }}
+                />
+            )}
                 </div>
             </div>
         </div>
@@ -5732,35 +3623,35 @@ function ExportImportModal({ onClose, onExport, onImport }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                 <h2 className="text-xl font-semibold mb-5 text-gray-800">
-                    ⚙️ Backup & Restore
+                    📦 Library Backup
                 </h2>
 
                 {/* Export Section */}
                 <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                    <h3 className="font-semibold text-blue-900 mb-2">📤 Backup Your Data</h3>
+                    <h3 className="font-semibold text-blue-900 mb-2">📤 Save a copy of your library</h3>
                     <p className="text-sm text-blue-700 mb-3">
-                        Download a backup file of all your reading data. Keep it safe!
+                        Download a file with your bookshelf and reading history. Keep it somewhere safe.
                     </p>
                     <button
                         onClick={onExport}
                         className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-all"
                     >
-                        Download Backup File
+                        Download library copy
                     </button>
                 </div>
 
                 {/* Import Section */}
                 <div className="mb-5 p-4 bg-green-50 border-2 border-green-200 rounded-xl">
-                    <h3 className="font-semibold text-green-900 mb-2">📥 Restore From Backup</h3>
+                    <h3 className="font-semibold text-green-900 mb-2">📥 Restore your library</h3>
                     <p className="text-sm text-green-700 mb-3">
-                        Restore your data from a backup file. This will replace your current data.
+                        Upload a library copy to restore your bookshelf and history. This will replace what's currently here.
                     </p>
                     {!importing ? (
                         <button
                             onClick={() => setImporting(true)}
                             className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-all"
                         >
-                            Choose Backup File
+                            Choose library file
                         </button>
                     ) : (
                         <div>
@@ -5966,7 +3857,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                                         key={idx}
                                         src={book.coverUrl} 
                                         alt={book.title}
-                                        className="w-12 h-16 object-cover rounded shadow-lg"
+                                        className="w-12 h-16 object-contain bg-white rounded shadow-lg"
                                         onError={(e) => e.target.style.display = 'none'}
                                     />
                                 ))}

@@ -6,7 +6,6 @@ import App from './App'
 export default function AppWrapper() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [showBanner, setShowBanner] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState('signin')
   const [migrating, setMigrating] = useState(false)
@@ -40,7 +39,6 @@ export default function AppWrapper() {
       if (newUser && !previousUser) {
         // User just signed in — check if migration is needed
         setShowAuth(false)
-        setShowBanner(false)
         await migrateLocalDataToSupabase(newUser)
       }
     })
@@ -55,7 +53,6 @@ export default function AppWrapper() {
       const migrated = localStorage.getItem('migratedToSupabase')
 
       if ((children.length > 0 || logs.length > 0) && !migrated) {
-        setShowBanner(true)
       }
     } catch (error) {
       console.error('Error checking localStorage:', error)
@@ -174,8 +171,6 @@ export default function AppWrapper() {
       clearTimeout(timeout)
       localStorage.setItem('migratedToSupabase', 'true')
       setMigrating(false)
-      setShowBanner(false)
-
     } catch (error) {
       console.error('Migration error:', error)
       // Always recover — don't leave user stuck
@@ -222,38 +217,12 @@ export default function AppWrapper() {
 
   return (
     <div>
-      {showBanner && !user && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-purple-800 text-white px-4 py-3 shadow-lg">
-          <div className="max-w-2xl mx-auto flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span>📚</span>
-              <span>Sign in to save your reading data across devices!</span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => openAuth('signup')}
-                className="px-4 py-1.5 bg-white text-purple-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-all"
-              >
-                Sign Up Free
-              </button>
-              <button
-                onClick={() => setShowBanner(false)}
-                className="px-4 py-1.5 bg-white bg-opacity-20 text-white rounded-lg text-sm hover:bg-opacity-30 transition-all border border-white border-opacity-40"
-              >
-                Later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginTop: showBanner && !user ? '56px' : '0' }}>
-        <App
+      
+      <App
           user={user}
           onSignOut={handleSignOut}
           onOpenAuth={openAuth}
         />
-      </div>
 
       {showAuth && (
         <Auth startMode={authMode} onClose={closeAuth} />
