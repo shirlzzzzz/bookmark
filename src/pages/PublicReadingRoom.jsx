@@ -552,7 +552,7 @@ export default function PublicReadingRoom() {
               );
             })}
             {allBooks.length === 0 && (
-              <p style={{ color: "#8C7F72", fontStyle: "italic", gridColumn: "1 / -1" }}>
+              <p style={{ color: "#8C7F72", fontStyle: "italic" }}>
                 No books yet.
               </p>
             )}
@@ -1157,16 +1157,23 @@ const globalCSS = `
 }
 .prr-amazon:hover { background: #C45500; color: white; }
 
-/* ── CARD GRID (All Books tab) ── */
+/* ── CARD GRID (horizontal scroll) ── */
 .prr-books-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 20px;
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.prr-books-grid::-webkit-scrollbar { display: none; }
 .prr-book-card {
   cursor: pointer;
   transition: transform 0.2s;
   display: block;
+  flex: 0 0 140px;
+  scroll-snap-align: start;
 }
 .prr-book-card:hover { transform: translateY(-4px); }
 .prr-book-cover {
@@ -1500,7 +1507,7 @@ const globalCSS = `
 .prr-inline-result-add:hover { background: #5C7A5C; }
 
 /* ── BOOK REMOVE ── */
-.prr-book-card-wrap { position: relative; }
+.prr-book-card-wrap { position: relative; flex: 0 0 140px; scroll-snap-align: start; }
 .prr-book-remove {
   position: absolute; top: -6px; right: -6px; z-index: 2;
   width: 24px; height: 24px; border-radius: 50%;
