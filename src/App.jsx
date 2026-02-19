@@ -684,7 +684,7 @@ const [selectedChild, setSelectedChild] = useState(null);
     };
 
     return (
-        <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif" }}>
             <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-xl">
                 {/* Header */}
                 {(() => {
@@ -702,19 +702,22 @@ const [selectedChild, setSelectedChild] = useState(null);
                     ).filter(count => count > 1).length;
                     
                     return (
-                        <div className={`bg-gradient-to-br from-purple-600 to-purple-800 text-white ${hasChildren ? 'p-4' : 'p-6'} text-center`}>
+                        <div className={`text-center ${hasChildren ? 'p-4' : 'p-6'}`} style={{ background: '#FAF7F2' }}>
+                            <style>{'@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap");'}</style>
                             <div className="flex justify-end mb-2 gap-2">
                                 {!user && (
                                     <button
                                         onClick={() => onOpenAuth('signin')}
-                                        className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
+                                        className="px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
+                                        style={{ color: '#4A4035' }}
                                     >
                                         👤 <span className="text-xs">Sign In / Sign Up</span>
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setShowSettings(true)}
-                                    className="text-white hover:bg-white hover:bg-opacity-20 px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
+                                    className="px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
+                                    style={{ color: '#4A4035' }}
                                     title="Reading Home"
                                 >
                                     ⚙️ <span className="text-xs">Reading Home</span>
@@ -724,10 +727,10 @@ const [selectedChild, setSelectedChild] = useState(null);
                             {hasChildren ? (
                                 /* Compact header for returning users */
                                 <div>
-                                    <h1 className="text-xl font-semibold mb-1">
+                                    <h1 className="text-xl font-semibold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: '#1C1712' }}>
                                         📚 The {familyProfile?.familyName || 'My'} Family Library
                                     </h1>
-                                    <p className="text-sm opacity-90">
+                                    <p className="text-sm" style={{ color: '#8C7F72' }}>
                                         {daysReadThisWeek === 0 
                                             ? "Your family's reading space" 
                                             : `📖 You've read together ${daysReadThisWeek} time${daysReadThisWeek !== 1 ? 's' : ''} this week`}
@@ -737,11 +740,11 @@ const [selectedChild, setSelectedChild] = useState(null);
                             ) : (
                                 /* Full header for new users */
                                 <div>
-                                    <h1 className="text-2xl font-semibold mb-2">
+                                    <h1 className="text-2xl font-semibold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: '#1C1712' }}>
                                         📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'OurBookmark'}
                                     </h1>
-                                    <p className="text-sm opacity-90 mb-2">From first board books to chapter books and beyond, OurBookmark helps families track reading and bookmark the moments that matter.</p>
-                                    <p className="text-xs opacity-75">Log reading in seconds, track progress for every child from the very first book through middle school, and generate school-ready reports when you need them.</p>
+                                    <p className="text-sm mb-2" style={{ color: '#4A4035' }}>From first board books to chapter books and beyond, OurBookmark helps families track reading and bookmark the moments that matter.</p>
+                                    <p className="text-xs" style={{ color: '#8C7F72' }}>Log reading in seconds, track progress for every child from the very first book through middle school, and generate school-ready reports when you need them.</p>
                                 </div>
                             )}
                         </div>
@@ -768,16 +771,16 @@ const [selectedChild, setSelectedChild] = useState(null);
                 {/* Celebration Banner */}
                 {celebration && (
                     <div 
-                        className="bg-gradient-to-r from-purple-100 to-pink-100 border-l-4 border-purple-500 p-4 m-4 rounded cursor-pointer"
+                        className="bg-gradient-to-r from-amber-100 to-orange-100 border-l-4 border-amber-500 p-4 m-4 rounded cursor-pointer"
                         onClick={() => setCelebration(null)}
                     >
                         <div className="flex items-start gap-3">
                             <span className="text-2xl">💜</span>
                             <div className="flex-1">
-                                <p className="font-medium text-purple-900">
+                                <p className="font-medium text-amber-900">
                                     Another memory saved 📖 You read {celebration.bookTitle} with {celebration.childName} today.
                                 </p>
-                                <p className="text-sm text-purple-700 mt-1">
+                                <p className="text-sm text-amber-800 mt-1">
                                     Saved to your library — these are the ones you'll remember.
                                 </p>
                             </div>
@@ -790,9 +793,10 @@ const [selectedChild, setSelectedChild] = useState(null);
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
                             currentView === 'discover' 
-                                ? 'text-purple-600 border-b-4 border-purple-600' 
+                                ? 'border-b-4' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
+                        style={currentView === 'discover' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
                         onClick={() => setCurrentView('discover')}
                     >
                         ✨ Discover
@@ -800,9 +804,10 @@ const [selectedChild, setSelectedChild] = useState(null);
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
                             currentView === 'library' 
-                                ? 'text-purple-600 border-b-4 border-purple-600' 
+                                ? 'border-b-4' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
+                        style={currentView === 'library' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
                         onClick={() => setCurrentView('library')}
                     >
                         📚 Library
@@ -810,9 +815,10 @@ const [selectedChild, setSelectedChild] = useState(null);
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
                             currentView === 'progress' 
-                                ? 'text-purple-600 border-b-4 border-purple-600' 
+                                ? 'border-b-4' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
+                        style={currentView === 'progress' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
                         onClick={() => setCurrentView('progress')}
                     >
                         📊 Progress
@@ -820,9 +826,10 @@ const [selectedChild, setSelectedChild] = useState(null);
                     <button 
                         className={`flex-1 py-4 text-sm font-medium transition-all ${
                             currentView === 'bookshelf' 
-                                ? 'text-purple-600 border-b-4 border-purple-600' 
+                                ? 'border-b-4' 
                                 : 'text-gray-500 border-b-4 border-transparent'
                         }`}
+                        style={currentView === 'bookshelf' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
                         onClick={() => setCurrentView('bookshelf')}
                     >
                         📖 Shelf
@@ -896,13 +903,13 @@ onLogBook={(book) => {
                     <div className="flex justify-center gap-6 text-sm">
                         <button 
                             onClick={() => setShowAbout(true)}
-                            className="text-purple-600 hover:text-purple-800 font-medium"
+                            className="text-amber-700 hover:text-amber-900 font-medium"
                         >
                             About
                         </button>
                         <button 
                             onClick={() => setShowFAQ(true)}
-                            className="text-purple-600 hover:text-purple-800 font-medium"
+                            className="text-amber-700 hover:text-amber-900 font-medium"
                         >
                             FAQ
                         </button>
@@ -1041,21 +1048,21 @@ onLogBook={(book) => {
                             <div className="p-6 pt-4 overflow-y-auto">
                             {/* How It Works */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-semibold text-purple-700 mb-4">📚 How It Works (3 Steps)</h3>
+                                <h3 className="text-lg font-semibold text-amber-800 mb-4">📚 How It Works (3 Steps)</h3>
                                 
                                 <div className="space-y-4">
-                                    <div className="bg-purple-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-purple-800 mb-1">1. Keep Stories in Seconds</h4>
+                                    <div className="bg-amber-50 p-4 rounded-lg">
+                                        <h4 className="font-semibold text-amber-900 mb-1">1. Keep Stories in Seconds</h4>
                                         <p className="text-sm text-gray-600">Log read-aloud or independent reading in seconds. Track minutes, books, and chapter completion—all in one place.</p>
                                     </div>
                                     
-                                    <div className="bg-purple-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-purple-800 mb-1">2. Watch Reading Grow</h4>
+                                    <div className="bg-amber-50 p-4 rounded-lg">
+                                        <h4 className="font-semibold text-amber-900 mb-1">2. Watch Reading Grow</h4>
                                         <p className="text-sm text-gray-600">See gentle progress dashboards for each child. Build a reading habit without pressure or comparison.</p>
                                     </div>
                                     
-                                    <div className="bg-purple-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold text-purple-800 mb-1">3. Share When Needed</h4>
+                                    <div className="bg-amber-50 p-4 rounded-lg">
+                                        <h4 className="font-semibold text-amber-900 mb-1">3. Share When Needed</h4>
                                         <p className="text-sm text-gray-600">Export clean, school-ready reports for teachers, homeschool records, or reading programs—no re-logging required.</p>
                                     </div>
                                 </div>
@@ -1063,7 +1070,7 @@ onLogBook={(book) => {
                             
                             {/* Who It's For */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-semibold text-purple-700 mb-3">👨‍👩‍👧‍👦 Who It's For</h3>
+                                <h3 className="text-lg font-semibold text-amber-800 mb-3">👨‍👩‍👧‍👦 Who It's For</h3>
                                 <p className="text-gray-600 mb-3">Built for families first. OurBookmark works whether your child is:</p>
                                 <ul className="text-sm text-gray-600 space-y-2 ml-4">
                                     <li>• A baby listening to their first books</li>
@@ -1076,7 +1083,7 @@ onLogBook={(book) => {
                             
                             {/* Key Features */}
                             <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-purple-700 mb-3">✨ Key Features</h3>
+                                <h3 className="text-lg font-semibold text-amber-800 mb-3">✨ Key Features</h3>
                                 <ul className="text-sm text-gray-600 space-y-2 ml-4">
                                     <li>• Unlimited children per family</li>
                                     <li>• Read-aloud + independent reading</li>
@@ -1112,7 +1119,7 @@ onLogBook={(book) => {
                             <div className="space-y-6">
                                 {/* General */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">General</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">General</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1134,7 +1141,7 @@ onLogBook={(book) => {
                                 
                                 {/* Reading & Tracking */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">Reading & Tracking</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">Reading & Tracking</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1161,7 +1168,7 @@ onLogBook={(book) => {
                                 
                                 {/* Reports & School Programs */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">Reports & School Programs</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">Reports & School Programs</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1173,7 +1180,7 @@ onLogBook={(book) => {
                                 
                                 {/* Teachers & Groups */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">Teachers, Classrooms & Groups</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">Teachers, Classrooms & Groups</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1190,7 +1197,7 @@ onLogBook={(book) => {
                                 
                                 {/* Privacy & Data */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">Privacy & Data</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">Privacy & Data</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1207,7 +1214,7 @@ onLogBook={(book) => {
                                 
                                 {/* Getting Started */}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-purple-700 mb-3">Getting Started</h3>
+                                    <h3 className="text-lg font-semibold text-amber-800 mb-3">Getting Started</h3>
                                     
                                     <div className="space-y-4">
                                         <div>
@@ -1250,7 +1257,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                 <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
                     Set up your readers in
-                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
+                    <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
                         Reading Home
                     </button>
                     to start saving stories
@@ -1264,7 +1271,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
     return (
         <div>
             <button 
-                className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all"
+                className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all"
                 onClick={onAddLog}
             >
                 📖 Save Story
@@ -1282,7 +1289,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                     {recentLogs.map(log => {
                         const child = children.find(c => c.id === log.childId);
                         return (
-                            <div key={log.id} className="bg-white border border-gray-200 rounded-xl p-4 mb-3 border-l-4 border-l-purple-600 hover:shadow-md transition-shadow">
+                            <div key={log.id} className="bg-white border border-gray-200 rounded-xl p-4 mb-3 border-l-4 border-l-amber-600 hover:shadow-md transition-shadow">
                                 <div className="flex gap-3">
                                     {/* Book Cover */}
                                     {log.coverUrl ? (
@@ -1295,7 +1302,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                                             }}
                                         />
                                     ) : (
-                                        <div className="w-14 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded flex items-center justify-center flex-shrink-0">
+                                        <div className="w-14 h-20 bg-gradient-to-br from-amber-100 to-amber-200 rounded flex items-center justify-center flex-shrink-0">
                                             <span className="text-2xl">📖</span>
                                         </div>
                                     )}
@@ -1315,7 +1322,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                                             </button>
                                         </div>
                                         <div className="text-sm text-gray-600 mb-2 truncate">{log.bookTitle}</div>
-                                        <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
+                                        <span className="inline-block px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-full">
                                             {log.minutes} minutes
                                         </span>
                                     </div>
@@ -1368,7 +1375,7 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                 <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
-                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
+                    <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
                         Reading Home
                     </button>
                     {' '}to start saving stories
@@ -1394,7 +1401,7 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
 
             {/* Save Story Button */}
             <button 
-                className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-4"
+                className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all mb-4"
                 onClick={onAddLog}
             >
                 📖 Save Story
@@ -1405,13 +1412,13 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                 <div className="mb-5">
                     <div className="flex justify-between items-center mb-2">
                         <h3 className="text-sm font-semibold text-gray-700">🎯 Active Goals</h3>
-                        <button onClick={onCreateGoal} className="text-xs text-purple-600 font-medium">+ New Goal</button>
+                        <button onClick={onCreateGoal} className="text-xs text-amber-700 font-medium">+ New Goal</button>
                     </div>
                     <div className="space-y-2">
                         {activeGoals.slice(0, 3).map(goal => {
                             const child = children.find(c => c.id === goal.childId);
                             return (
-                                <div key={goal.id} className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <div key={goal.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
                                     <div className="flex-1 min-w-0">
                                         <div className="text-sm font-medium text-gray-800 truncate">{goal.name}</div>
                                         <div className="text-xs text-gray-500">{child?.name}</div>
@@ -1459,7 +1466,7 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                                 {log.coverUrl ? (
                                     <img src={log.coverUrl} alt="" className="w-12 h-16 object-contain bg-white rounded-lg shadow-sm flex-shrink-0" />
                                 ) : (
-                                    <div className="w-12 h-16 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-16 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <span className="text-lg">📖</span>
                                     </div>
                                 )}
@@ -1475,7 +1482,7 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                                     </div>
                                     <div className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
                                     <div className="text-sm text-gray-600 mb-2 truncate">{log.bookTitle}{log.author ? ` by ${log.author}` : ''}</div>
-                                    <span className="inline-block px-3 py-1 bg-purple-600 text-white text-xs font-medium rounded-full">
+                                    <span className="inline-block px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-full">
                                         {log.minutes} minutes
                                     </span>
                                 </div>
@@ -1701,7 +1708,7 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                 />
             ) : null}
             <div 
-                className={`${size === 'small' ? 'w-28 h-40' : 'w-full h-44'} bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg shadow-md mb-1.5 items-center justify-center`}
+                className={`${size === 'small' ? 'w-28 h-40' : 'w-full h-44'} bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg shadow-md mb-1.5 items-center justify-center`}
                 style={{ display: book.cover ? 'none' : 'flex' }}
             >
                 <span className="text-2xl">📖</span>
@@ -1710,7 +1717,7 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
             <p className={`${size === 'small' ? 'text-xs w-28' : 'text-xs'} text-gray-400 truncate`}>{book.author}</p>
             <button 
                 onClick={() => onLogBook({ title: book.title, author: book.author, cover: book.cover })}
-                className="mt-1 text-xs text-purple-600 font-medium hover:text-purple-800"
+                className="mt-1 text-xs text-amber-700 font-medium hover:text-amber-900"
             >
                 + Keep this
             </button>
@@ -1744,11 +1751,11 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && searchGoogleBooks(searchQuery)}
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     />
                     <button
                         onClick={() => searchGoogleBooks(searchQuery)}
-                        className="px-4 py-3 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700"
+                        className="px-4 py-3 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700"
                     >
                         🔍
                     </button>
@@ -1846,7 +1853,7 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                                     onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
                                     className={`p-3 rounded-xl text-left transition-all ${
                                         expandedSection === cat.key 
-                                            ? 'bg-purple-100 border-2 border-purple-300' 
+                                            ? 'bg-amber-100 border-2 border-amber-300' 
                                             : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
                                     }`}
                                 >
@@ -1884,7 +1891,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                 <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
-                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
+                    <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
                         Reading Home
                     </button>
                     {' '}to start saving stories
@@ -2013,7 +2020,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Reader</label>
                     <select 
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         value={childId}
                         onChange={(e) => onSelectChild(e.target.value)}
                     >
@@ -2027,11 +2034,11 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
             <h2 className="text-xl font-semibold mb-4">{child?.name}'s Progress</h2>
 
             {/* WEEKLY READING GOAL */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 mb-5">
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 rounded-xl p-4 mb-5">
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <h3 className="font-semibold text-gray-800">📖 Weekly Reading Goal</h3>
-                        <p className="text-sm text-purple-600">
+                        <p className="text-sm text-amber-700">
                           {(goal.minutesPerDay > 0 && goal.daysPerWeek > 0)
                             ? (<>{goal.minutesPerDay} min/day · {goal.daysPerWeek} days/week</>)
                             : (<>No goal set yet</>)
@@ -2040,20 +2047,20 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                     </div>
                     <button 
                         onClick={() => setShowEditGoal(true)}
-                        className="text-sm text-purple-600 font-medium hover:text-purple-800"
+                        className="text-sm text-amber-700 font-medium hover:text-amber-900"
                     >Edit Goal</button>
                 </div>
-                <div className="flex justify-between text-sm text-purple-700 mb-1">
+                <div className="flex justify-between text-sm text-amber-800 mb-1">
                     <span>{weekMinutes} of {weeklyGoalMinutes} minutes</span>
                     <span>{goalProgress}%</span>
                 </div>
-                <div className="w-full bg-purple-200 rounded-full h-3 mb-2">
+                <div className="w-full bg-amber-200 rounded-full h-3 mb-2">
                     <div 
-                        className="bg-purple-600 rounded-full h-3 transition-all"
+                        className="bg-amber-600 rounded-full h-3 transition-all"
                         style={{ width: `${goalProgress}%` }}
                     />
                 </div>
-                <p className="text-sm text-purple-700">
+                <p className="text-sm text-amber-800">
                     {goalProgress >= 100 
                         ? '🎉 Goal reached! Amazing job!' 
                         : `Read ${daysNeeded} more day${daysNeeded !== 1 ? 's' : ''} this week`
@@ -2078,11 +2085,11 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
 
             {/* 2. THIS WEEK */}
             <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 text-white text-center">
+                <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-4 text-white text-center">
                     <div className="text-3xl font-bold">{weekBooks}</div>
                     <div className="text-xs font-medium opacity-85 mt-1">Books Read</div>
                 </div>
-                <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-4 text-white text-center">
+                <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-4 text-white text-center">
                     <div className="text-3xl font-bold">
                         {weekHours > 0 ? `${weekHours}h ${weekRemainMin}m` : `${allWeekMinutes}m`}
                     </div>
@@ -2105,7 +2112,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                             <div className="text-xs text-gray-500 font-medium mb-1">{day.label}</div>
                             <div className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-sm font-bold ${
                                 day.hasReading 
-                                    ? 'bg-purple-600 text-white' 
+                                    ? 'bg-amber-600 text-white' 
                                     : day.isPast 
                                         ? 'bg-gray-100 text-gray-400' 
                                         : 'bg-gray-50 text-gray-300'
@@ -2151,7 +2158,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                                 {week.minutes > 0 ? `${week.minutes}m` : ''}
                             </div>
                             <div 
-                                className="w-full rounded-t-md bg-gradient-to-t from-purple-600 to-purple-400 transition-all"
+                                className="w-full rounded-t-md bg-gradient-to-t from-amber-600 to-amber-400 transition-all"
                                 style={{ 
                                     height: `${Math.max((week.minutes / maxWeekMin) * 100, week.minutes > 0 ? 8 : 2)}%`,
                                     minHeight: week.minutes > 0 ? '12px' : '3px'
@@ -2207,7 +2214,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                                     updateChildGoal(childId, mins, days);
                                     setShowEditGoal(false);
                                 }}
-                                className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700"
+                                className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700"
                             >Save</button>
                         </div>
                     </div>
@@ -2232,7 +2239,7 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
                 <h3 className="text-lg text-gray-600 mb-2">Add a reader first</h3>
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
-                    <button onClick={onOpenSettings} className="text-purple-600 hover:text-purple-800 underline font-medium">
+                    <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
                         Reading Home
                     </button>
                     {' '}to start saving stories
@@ -2252,7 +2259,7 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
             <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Reader</label>
                 <select 
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     value={bookshelfChild}
                     onChange={(e) => setBookshelfChild(e.target.value)}
                 >
@@ -2287,7 +2294,7 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
                                 />
                             ) : null}
                             <div 
-                                className="w-full h-40 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg shadow-md items-center justify-center"
+                                className="w-full h-40 bg-gradient-to-br from-amber-100 to-amber-200 rounded-lg shadow-md items-center justify-center"
                                 style={{ display: log.coverUrl ? 'none' : 'flex' }}
                             >
                                 <span className="text-2xl">📖</span>
@@ -2328,7 +2335,7 @@ function AddChildModal({ onClose, onAdd }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                         <input
                             type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Reader's name"
@@ -2340,7 +2347,7 @@ function AddChildModal({ onClose, onAdd }) {
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Age Group *</label>
                         <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={childType}
                             onChange={(e) => setChildType(e.target.value)}
                         >
@@ -2357,7 +2364,7 @@ function AddChildModal({ onClose, onAdd }) {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Grade (optional)</label>
                             <input
                                 type="text"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                 value={grade}
                                 onChange={(e) => setGrade(e.target.value)}
                                 placeholder="e.g., 2nd, K, 5"
@@ -2396,7 +2403,7 @@ function AddChildModal({ onClose, onAdd }) {
                         </div>
                     )}
 
-                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
+                    <button type="submit" className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all mb-2">
                         Add Reader
                     </button>
                     <button 
@@ -2445,7 +2452,7 @@ function EditChildModal({ child, onClose, onSave }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
                         <input
                             type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
@@ -2455,7 +2462,7 @@ function EditChildModal({ child, onClose, onSave }) {
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Age Group</label>
                         <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={childType}
                             onChange={(e) => setChildType(e.target.value)}
                         >
@@ -2472,7 +2479,7 @@ function EditChildModal({ child, onClose, onSave }) {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
                             <input
                                 type="text"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                 value={grade}
                                 onChange={(e) => setGrade(e.target.value)}
                                 placeholder="e.g., 2nd, K, 5"
@@ -2487,7 +2494,7 @@ function EditChildModal({ child, onClose, onSave }) {
                                 <label className="block text-xs text-gray-500 mb-1">Minutes/day</label>
                                 <input
                                     type="number"
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                     value={goalMinutes}
                                     onChange={(e) => setGoalMinutes(e.target.value)}
                                     min="1"
@@ -2498,7 +2505,7 @@ function EditChildModal({ child, onClose, onSave }) {
                                 <label className="block text-xs text-gray-500 mb-1">Days/week</label>
                                 <input
                                     type="number"
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                     value={goalDays}
                                     onChange={(e) => setGoalDays(e.target.value)}
                                     min="1"
@@ -2508,7 +2515,7 @@ function EditChildModal({ child, onClose, onSave }) {
                         </div>
                     </div>
 
-                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
+                    <button type="submit" className="w-full bg-amber-600 text-white py-3.5 rounded-lg font-medium hover:bg-amber-700 transition-all mb-2">
                         Save Changes
                     </button>
                     <button 
@@ -2809,14 +2816,14 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                 
                 {/* Voice Input Section */}
                 {isSpeechSupported && (
-                    <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border-2 border-purple-200">
+                    <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl border-2 border-amber-200">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                                 <span className="text-2xl">🎤</span>
-                                <span className="text-sm font-semibold text-purple-900">Quick Voice Log</span>
+                                <span className="text-sm font-semibold text-amber-900">Quick Voice Log</span>
                             </div>
                         </div>
-                        <p className="text-xs text-purple-700 mb-3">
+                        <p className="text-xs text-amber-800 mb-3">
                             Say: "Emma, Charlotte's Web, 20 minutes"
                         </p>
                         <button
@@ -2826,7 +2833,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                             className={`w-full py-3 rounded-lg font-medium transition-all ${
                                 isListening 
                                     ? 'bg-red-500 text-white animate-pulse' 
-                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                                    : 'bg-amber-600 text-white hover:bg-amber-700'
                             }`}
                         >
                             {isListening ? '🎤 Listening...' : '🎤 Start Voice Input'}
@@ -2855,7 +2862,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Child *</label>
                         <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={selectedChildId}
                             onChange={(e) => setSelectedChildId(e.target.value)}
                             required
@@ -2872,7 +2879,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Book Title *</label>
                         <input
                             type="text"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={bookTitle}
                             onChange={handleBookTitleChange}
                             onFocus={() => setShowSuggestions(true)}
@@ -2894,7 +2901,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                             <button
                                                 key={idx}
                                                 type="button"
-                                                className="w-full text-left px-3 py-2.5 hover:bg-purple-50 border-b border-gray-100 transition-colors"
+                                                className="w-full text-left px-3 py-2.5 hover:bg-amber-50 border-b border-gray-100 transition-colors"
                                                 onClick={() => selectBook(book, '')}
                                             >
                                                 <div className="text-sm text-gray-800">{book}</div>
@@ -2919,7 +2926,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                                     <button
                                                         key={idx}
                                                         type="button"
-                                                        className="w-full text-left px-3 py-2.5 hover:bg-purple-50 border-b border-gray-100 transition-colors flex items-center gap-3"
+                                                        className="w-full text-left px-3 py-2.5 hover:bg-amber-50 border-b border-gray-100 transition-colors flex items-center gap-3"
                                                         onClick={() => selectBook(book.title, book.author, book.coverUrl)}
                                                     >
                                                         {book.coverUrl && (
@@ -2983,7 +2990,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Minutes *</label>
                         <input
                             type="number"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={minutes}
                             onChange={(e) => setMinutes(e.target.value)}
                             placeholder="How long?"
@@ -2997,8 +3004,8 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                     type="button"
                                     className={`py-2.5 rounded-lg text-sm font-medium transition-all ${
                                         minutes == m 
-                                            ? 'bg-purple-600 text-white border-2 border-purple-600' 
-                                            : 'bg-gray-100 text-gray-700 border-2 border-gray-200 hover:bg-purple-600 hover:text-white hover:border-purple-600'
+                                            ? 'bg-amber-600 text-white border-2 border-amber-600' 
+                                            : 'bg-gray-100 text-gray-700 border-2 border-gray-200 hover:bg-amber-600 hover:text-white hover:border-amber-600'
                                     }`}
                                     onClick={() => setMinutes(m.toString())}
                                 >
@@ -3016,7 +3023,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                             </label>
                             <input
                                 type="text"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                 value={chapterProgress}
                                 onChange={(e) => setChapterProgress(e.target.value)}
                                 placeholder="e.g., Chapter 5, Page 120, 50%"
@@ -3028,14 +3035,14 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                         <input
                             type="date"
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             max={new Date().toISOString().split('T')[0]}
                         />
                     </div>
 
-                    <button type="submit" className="w-full bg-purple-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-purple-700 transition-all mb-2">
+                    <button type="submit" className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all mb-2">
                         Log Reading
                     </button>
                     <button 
@@ -3078,7 +3085,7 @@ function EditGoalModal({ child, onClose, onSave }) {
                             type="number"
                             value={minutesPerDay}
                             onChange={(e) => setMinutesPerDay(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             min="1"
                         />
                     </div>
@@ -3089,7 +3096,7 @@ function EditGoalModal({ child, onClose, onSave }) {
                             type="number"
                             value={daysPerWeek}
                             onChange={(e) => setDaysPerWeek(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             min="1"
                             max="7"
                         />
@@ -3105,7 +3112,7 @@ function EditGoalModal({ child, onClose, onSave }) {
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-medium"
+                            className="flex-1 px-4 py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 font-medium"
                         >
                             Save Goal
                         </button>
@@ -3199,7 +3206,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                     {[...Array(totalSteps)].map((_, i) => (
                         <div 
                             key={i} 
-                            className={`flex-1 h-1.5 rounded-full ${i < step ? 'bg-purple-600' : 'bg-gray-200'}`}
+                            className={`flex-1 h-1.5 rounded-full ${i < step ? 'bg-amber-600' : 'bg-gray-200'}`}
                         />
                     ))}
                 </div>
@@ -3213,7 +3220,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                         
                         <button 
                             onClick={() => setStep(2)}
-                            className="w-full bg-purple-600 text-white py-3.5 rounded-lg font-semibold hover:bg-purple-700 transition-all mb-3"
+                            className="w-full bg-amber-600 text-white py-3.5 rounded-lg font-semibold hover:bg-amber-700 transition-all mb-3"
                         >
                             Create our library
                         </button>
@@ -3236,14 +3243,14 @@ function OnboardingModal({ onComplete, onSkip }) {
                             type="text"
                             value={familyName}
                             onChange={(e) => setFamilyName(e.target.value)}
-                            className="w-full p-3.5 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-6"
+                            className="w-full p-3.5 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-6"
                             placeholder="The Johnson Family Library"
                             autoFocus
                         />
 
                         <div className="flex gap-3">
                             <button onClick={() => setStep(1)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
-                            <button onClick={() => setStep(3)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
+                            <button onClick={() => setStep(3)} className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700">Next</button>
                         </div>
                     </div>
                 )}
@@ -3266,7 +3273,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                                     type="text"
                                     value={kid.name}
                                     onChange={(e) => updateKid(index, 'name', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full p-3 border border-gray-300 rounded-lg mb-3 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                                     placeholder="Reader's name"
                                     autoFocus={index === 0}
                                 />
@@ -3291,11 +3298,11 @@ function OnboardingModal({ onComplete, onSkip }) {
                             </div>
                         ))}
 
-                        <button onClick={addKid} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-purple-400 mb-5">+ Add another reader</button>
+                        <button onClick={addKid} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-amber-400 mb-5">+ Add another reader</button>
 
                         <div className="flex gap-3">
                             <button onClick={() => setStep(2)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
-                            <button onClick={() => setStep(4)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
+                            <button onClick={() => setStep(4)} className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700">Next</button>
                         </div>
                     </div>
                 )}
@@ -3318,7 +3325,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                                             onClick={() => toggleGenre(index, genre)}
                                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                                                 (kid.favoriteGenres || []).includes(genre) 
-                                                    ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                                    ? 'bg-amber-100 text-amber-800 border-2 border-amber-300' 
                                                     : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:border-gray-300'
                                             }`}
                                         >
@@ -3331,7 +3338,7 @@ function OnboardingModal({ onComplete, onSkip }) {
 
                         <div className="flex gap-3 mt-5">
                             <button onClick={() => setStep(3)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
-                            <button onClick={() => setStep(5)} className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">Next</button>
+                            <button onClick={() => setStep(5)} className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700">Next</button>
                         </div>
                     </div>
                 )}
@@ -3349,7 +3356,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                                     onClick={() => setReadingTime(time)}
                                     className={`w-full p-3.5 rounded-xl text-left text-sm font-medium transition-all ${
                                         readingTime === time 
-                                            ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                            ? 'bg-amber-100 text-amber-800 border-2 border-amber-300' 
                                             : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:border-gray-300'
                                     }`}
                                 >
@@ -3372,7 +3379,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                                         onClick={() => setReadingGoal(opt.val)}
                                         className={`w-full p-3.5 rounded-xl text-left text-sm font-medium transition-all ${
                                             readingGoal === opt.val 
-                                                ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' 
+                                                ? 'bg-amber-100 text-amber-800 border-2 border-amber-300' 
                                                 : 'bg-gray-50 text-gray-600 border-2 border-transparent hover:border-gray-300'
                                         }`}
                                     >
@@ -3386,7 +3393,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                             <button onClick={() => setStep(4)} className="flex-1 py-3 border border-gray-300 rounded-lg font-medium text-gray-600">Back</button>
                             <button 
                                 onClick={handleComplete}
-                                className="flex-1 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700"
+                                className="flex-1 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700"
                             >
                                 Open our library
                             </button>
@@ -3457,7 +3464,7 @@ function SettingsModal({
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
                     <div className="text-center">
                         <h2 className="text-lg font-semibold text-gray-800">Reading Home</h2>
-                        <p className="text-sm text-purple-600 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
+                        <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                         <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
                     </div>
                 </div>
@@ -3471,7 +3478,7 @@ function SettingsModal({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                                 <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                                 <div className="flex gap-2">
-                                    <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium">Save</button>
+                                    <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
                                     <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>
                                 </div>
                             </div>
@@ -3483,7 +3490,7 @@ function SettingsModal({
                                         <div className="text-xs text-gray-500 mt-1">What matters most: building the habit</div>
                                         <div className="text-xs text-gray-500">Your reading routine: flexible</div>
                                     </div>
-                                    <button onClick={() => setEditingFamily(true)} className="text-xs text-purple-600 font-medium">Edit</button>
+                                    <button onClick={() => setEditingFamily(true)} className="text-xs text-amber-700 font-medium">Edit</button>
                                 </div>
                             </div>
                         )}
@@ -3501,10 +3508,10 @@ function SettingsModal({
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
                                                 <div className="font-semibold text-gray-800 text-base">{child.name}</div>
-                                                <div className="text-xs text-purple-600 font-medium">{emotionalLine}</div>
+                                                <div className="text-xs text-amber-700 font-medium">{emotionalLine}</div>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                            <button onClick={() => setEditingChild(child)} className="text-xs text-purple-600 font-medium hover:text-purple-700">Edit</button>
+                                            <button onClick={() => setEditingChild(child)} className="text-xs text-amber-700 font-medium hover:text-amber-800">Edit</button>
                                             <button onClick={() => onDeleteChild(child.id)} className="text-xs text-gray-400 hover:text-gray-600">Pause</button>
                                         </div>
                                         </div>
@@ -3516,7 +3523,7 @@ function SettingsModal({
                                             <button
                                                 onClick={() => onShareCard && onShareCard(child)}
                                                 disabled={!onShareCard}
-                                                className="py-2 rounded-xl bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="py-2 rounded-xl bg-amber-50 text-amber-800 text-sm font-medium hover:bg-amber-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 📤 Share
                                             </button>
@@ -3533,7 +3540,7 @@ function SettingsModal({
                                 );
                             })}
                         </div>
-                        <button onClick={onAddChild} className="w-full mt-3 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-all">+ Add another reader</button>
+                        <button onClick={onAddChild} className="w-full mt-3 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-amber-400 hover:text-amber-700 transition-all">+ Add another reader</button>
                         
                         {archivedChildren.length > 0 && (
                             <div className="mt-4">
@@ -3549,7 +3556,7 @@ function SettingsModal({
                                                 <button onClick={() => {
                                                     const updated = children.map(c => c.id === child.id ? { ...c, archived: false } : c);
                                                     onUpdateChild && onUpdateChild(child.id, { ...child, archived: false });
-                                                }} className="text-xs text-purple-600 font-medium">Restore</button>
+                                                }} className="text-xs text-amber-700 font-medium">Restore</button>
                                             </div>
                                         ))}
                                     </div>
@@ -3564,7 +3571,7 @@ function SettingsModal({
                         {user ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-4">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-lg">👤</div>
+                                    <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-lg">👤</div>
                                     <div>
                                         <div className="font-medium text-gray-800 text-sm">{user.email}</div>
                                         <div className="text-xs text-green-600">Your library is safely saved</div>
@@ -3576,7 +3583,7 @@ function SettingsModal({
                             <div className="bg-white border border-gray-200 rounded-xl p-4">
                                 <p className="text-sm text-gray-600 mb-3">Sign in to save your library across devices</p>
                                 {onSignIn ? (
-                                    <button onClick={onSignIn} className="w-full py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">Sign In / Sign Up</button>
+                                    <button onClick={onSignIn} className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">Sign In / Sign Up</button>
                                 ) : (
                                     <p className="text-xs text-gray-400">Your data is saved locally on this device</p>
                                 )}
@@ -3859,7 +3866,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                             onClick={() => setCardType('child')}
                             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                                 cardType === 'child' 
-                                    ? 'bg-purple-600 text-white' 
+                                    ? 'bg-amber-600 text-white' 
                                     : 'bg-gray-100 text-gray-600'
                             }`}
                         >
@@ -3869,7 +3876,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                             onClick={() => setCardType('family')}
                             className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                                 cardType === 'family' 
-                                    ? 'bg-purple-600 text-white' 
+                                    ? 'bg-amber-600 text-white' 
                                     : 'bg-gray-100 text-gray-600'
                             }`}
                         >
@@ -3882,7 +3889,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                 {cardType === 'child' && (
                     <div 
                         ref={cardRef}
-                        className="bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 rounded-2xl p-5 text-white mb-4 shadow-xl"
+                        className="bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 rounded-2xl p-5 text-white mb-4 shadow-xl"
                         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
                     >
                         <div className="text-center mb-4">
@@ -3940,7 +3947,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                 {cardType === 'family' && (
                     <div 
                         ref={cardRef}
-                        className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-5 text-white mb-4 shadow-xl"
+                        className="bg-gradient-to-br from-indigo-600 via-amber-600 to-amber-600 rounded-2xl p-5 text-white mb-4 shadow-xl"
                         style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
                     >
                         <div className="text-center mb-4">
@@ -4001,7 +4008,7 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
                     <button
                         onClick={saveCard}
                         disabled={saving}
-                        className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-purple-700 transition-all disabled:opacity-50"
+                        className="w-full bg-amber-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-amber-700 transition-all disabled:opacity-50"
                     >
                         {saving ? 'Saving...' : '📸 Screenshot to Save & Share'}
                     </button>
