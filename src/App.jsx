@@ -37,60 +37,21 @@ const getWeekStart = (date = new Date()) => {
     return new Date(d.setDate(diff));
 };
 
-// Fetch book cover from Open Library API
-// Fetch best book cover from Open Library (no ISBN required)
+// Fetch book cover from Google Books API
 const fetchBookCover = async (bookTitle) => {
   try {
     const cleanTitle = (bookTitle || "").split(" by ")[0].trim();
     if (!cleanTitle) return null;
-
-    const searchQuery = encodeURIComponent(cleanTitle);
-
-    // Get more results so we can pick a better one than docs[0]
-    const response = await fetch(
-      `https://openlibrary.org/search.json?title=${searchQuery}&limit=10`
-    );
-    const data = await response.json();
-
-    if (!data?.docs?.length) return null;
-
-    // Prefer: has ISBN, newer first_publish_year, has cover_i
-    const candidates = data.docs
-      .filter((d) => d && (d.cover_i || d.isbn || d.edition_key || d.key))
-      .sort((a, b) => {
-        const aHasIsbn = a.isbn?.length ? 1 : 0;
-        const bHasIsbn = b.isbn?.length ? 1 : 0;
-
-        const aYear = a.first_publish_year || 0;
-        const bYear = b.first_publish_year || 0;
-
-        const aHasCover = a.cover_i ? 1 : 0;
-        const bHasCover = b.cover_i ? 1 : 0;
-
-        // isbn > newer year > has cover
-        return (bHasIsbn - aHasIsbn) || (bYear - aYear) || (bHasCover - aHasCover);
-      });
-
-    const best = candidates[0] || data.docs[0];
-
-    // 1) Best option: ISBN cover (often newer editions)
-    const isbn = best?.isbn?.[0];
-    if (isbn) {
-      return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`;
-    }
-
-    // 2) Next: cover_i (your current approach)
-    if (best?.cover_i) {
-      return `https://covers.openlibrary.org/b/id/${best.cover_i}-M.jpg`;
-    }
-
-    // 3) Fallback: edition cover (sometimes works)
-    const edition = best?.edition_key?.[0];
-    if (edition) {
-      return `https://covers.openlibrary.org/b/olid/${edition}-M.jpg`;
-    }
-
-    return null;
+    const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
+    const q = encodeURIComponent(cleanTitle);
+    const url = apiKey
+      ? `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&printType=books&key=${apiKey}`
+      : `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&printType=books`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const item = data.items?.[0];
+    const thumb = item?.volumeInfo?.imageLinks?.thumbnail;
+    return thumb ? thumb.replace("http:", "https:").replace("zoom=1", "zoom=2") : null;
   } catch (error) {
     console.error("Error fetching book cover:", error);
     return null;

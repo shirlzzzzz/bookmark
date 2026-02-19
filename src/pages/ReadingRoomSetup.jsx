@@ -24,6 +24,7 @@ export default function ReadingRoomSetup() {
   const [bookQuery, setBookQuery] = useState("");
   const [bookResults, setBookResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [searchMode, setSearchMode] = useState("title"); // "title" or "author"
   const [shelfBooksList, setShelfBooksList] = useState([]);
 
   // Load user & existing profile
@@ -147,27 +148,48 @@ export default function ReadingRoomSetup() {
     setSearching(true);
     try {
       const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-      const q = encodeURIComponent(bookQuery.trim());
-      const url = apiKey
-        ? `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6&key=${apiKey}`
-        : `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6`;
+      const prefix = searchMode === "author" ? "inauthor" : "intitle";
+      const q = encodeURIComponent(`${prefix}:"${bookQuery.trim()}"`);
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books&langRestrict=en&key=${apiKey || ''}&t=${Date.now()}`;
+
       const res = await fetch(url);
       const data = await res.json();
-      const items = (data.items || []).map((item) => {
-        const v = item.volumeInfo || {};
-        const ids = (v.industryIdentifiers || []);
-        return {
-          google_books_id: item.id,
-          title: v.title || "Untitled",
-          author: (v.authors || []).join(", "),
-          cover_url: v.imageLinks?.thumbnail?.replace("http:", "https:").replace("zoom=1", "zoom=0") || null,
-          isbn_13: ids.find((i) => i.type === "ISBN_13")?.identifier || null,
-          isbn_10: ids.find((i) => i.type === "ISBN_10")?.identifier || null,
-        };
-      });
-      setBookResults(items);
+
+      const JUNK = ["summary", "analysis", "guide", "workbook", "boxed set", "phenomenon", "biography", "study", "business", "leadership", "companion", "unofficial"];
+
+      const items = (data.items || [])
+        .filter((item) => {
+          const info = item.volumeInfo || {};
+          const title = (info.title || "").toLowerCase();
+          const subtitle = (info.subtitle || "").toLowerCase();
+          const categories = (info.categories || []).join(" ").toLowerCase();
+
+          const hasImage = info.imageLinks?.thumbnail;
+          const isEnglish = info.language === 'en';
+          const isJunk = JUNK.some(kw =>
+            title.includes(kw) ||
+            subtitle.includes(kw) ||
+            categories.includes("business") ||
+            categories.includes("study")
+          );
+
+          return hasImage && isEnglish && !isJunk;
+        })
+        .map((item) => {
+          const v = item.volumeInfo;
+          return {
+            google_books_id: item.id,
+            title: v.title,
+            author: (v.authors || []).join(", "),
+            cover_url: v.imageLinks.thumbnail.replace("http:", "https:"),
+            isbn_13: v.industryIdentifiers?.find(i => i.type === "ISBN_13")?.identifier || null,
+            isbn_10: v.industryIdentifiers?.find(i => i.type === "ISBN_10")?.identifier || null,
+          };
+        });
+
+      setBookResults(items.slice(0, 8));
     } catch (e) {
-      console.warn("Book search error:", e);
+      console.warn("Search error:", e);
       setBookResults([]);
     }
     setSearching(false);
@@ -566,6 +588,38 @@ export default function ReadingRoomSetup() {
               Search for books to add to this shelf. You can always add more later.
             </p>
 
+            {/* Search Mode Toggle */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+              <button
+                onClick={() => setSearchMode("title")}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '4px 12px',
+                  borderRadius: '100px',
+                  border: '1px solid #C4873A',
+                  background: searchMode === "title" ? "#C4873A" : "transparent",
+                  color: searchMode === "title" ? "white" : "#C4873A",
+                  cursor: 'pointer'
+                }}
+              >
+                Search by Title
+              </button>
+              <button
+                onClick={() => setSearchMode("author")}
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '4px 12px',
+                  borderRadius: '100px',
+                  border: '1px solid #C4873A',
+                  background: searchMode === "author" ? "#C4873A" : "transparent",
+                  color: searchMode === "author" ? "white" : "#C4873A",
+                  cursor: 'pointer'
+                }}
+              >
+                Search by Author
+              </button>
+            </div>
+
             {/* Search */}
             <div className="rrs-search-row">
               <input
@@ -573,7 +627,7 @@ export default function ReadingRoomSetup() {
                 value={bookQuery}
                 onChange={(e) => setBookQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchBooks()}
-                placeholder="Search by title or author…"
+                placeholder={searchMode === "author" ? "e.g. J.K. Rowling" : "e.g. Harry Potter"}
                 className="rrs-input"
                 style={{ marginBottom: 0, flex: 1 }}
                 autoFocus
@@ -596,10 +650,21 @@ export default function ReadingRoomSetup() {
                   <div key={book.google_books_id || i} className="rrs-book-result">
                     <div className="rrs-book-result-cover">
                       {book.cover_url ? (
-                        <img src={book.cover_url} alt="" />
-                      ) : (
-                        <div className="rrs-book-result-placeholder">📖</div>
-                      )}
+                        <img
+                          src={book.cover_url}
+                          alt=""
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.nextSibling.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="rrs-book-result-placeholder"
+                        style={{ display: book.cover_url ? "none" : "flex", flexDirection: "column", alignItems: "center", gap: 2 }}
+                      >
+                        <span style={{ fontSize: "1.4rem" }}>📚</span>
+                      </div>
                     </div>
                     <div className="rrs-book-result-info">
                       <div className="rrs-book-result-title">{book.title}</div>
