@@ -736,8 +736,8 @@ const [selectedChild, setSelectedChild] = useState(null);
                                     <h1 className="text-2xl font-semibold mb-2" style={{ fontFamily: "'Playfair Display', serif", color: '#1C1712' }}>
                                         📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'OurBookmark'}
                                     </h1>
-                                    <p className="text-sm mb-2" style={{ color: '#4A4035' }}>From first board books to chapter books and beyond, OurBookmark helps families track reading and bookmark the moments that matter.</p>
-                                    <p className="text-xs" style={{ color: '#8C7F72' }}>Log reading in seconds, track progress for every child from the very first book through middle school, and generate school-ready reports when you need them.</p>
+                                    <p className="text-sm mb-2" style={{ color: '#4A4035' }}>Every story your family shares. Tracked, remembered, and passed along.</p>
+                                    <p className="text-xs" style={{ color: '#8C7F72' }}>Log reading in seconds. Curate shelves of your favorite picks. Built for families who love books.</p>
                                 </div>
                             )}
                         </div>
