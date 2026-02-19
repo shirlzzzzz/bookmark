@@ -3559,7 +3559,7 @@ function SettingsModal({
                     </div>
 
                     {/* YOU */}
-                    <div>
+                    <div className="mb-8">
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">You</div>
                         {user ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -3584,6 +3584,11 @@ function SettingsModal({
                         )}
                     </div>
 
+                    {/* READING ROOM */}
+                    {user && (
+                        <ReadingRoomSection userId={user.id} />
+                    )}
+
             {editingChild && (
                 <EditChildModal
                     child={editingChild}
@@ -3595,6 +3600,64 @@ function SettingsModal({
                 />
             )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+// Reading Room Section for Settings
+function ReadingRoomSection({ userId }) {
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function fetchProfile() {
+            const { data } = await supabase
+                .from('profiles')
+                .select('username, display_name, room_is_public')
+                .eq('id', userId)
+                .single();
+            setProfile(data);
+            setLoading(false);
+        }
+        fetchProfile();
+    }, [userId]);
+
+    if (loading) return null;
+
+    const hasRoom = profile?.username && profile?.room_is_public;
+
+    return (
+        <div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Reading Room</div>
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+                {hasRoom ? (
+                    <>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-lg">📖</div>
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">ourbookmark.com/@{profile.username}</div>
+                                <div className="text-xs text-green-600">Your Reading Room is live!</div>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <a href={`/@${profile.username}`} className="flex-1 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium text-center hover:bg-amber-700 transition-all">View Reading Room</a>
+                            <a href="/setup" className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 text-center hover:bg-gray-50 transition-all">Edit Shelves</a>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-lg">📖</div>
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">Share Your Book Recommendations</div>
+                                <div className="text-xs text-gray-500">Create a public page with your curated bookshelves</div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-3">Curate shelves, add personal notes, and earn from affiliate links — all in a beautiful page that's uniquely yours.</p>
+                        <a href="/setup" className="block w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium text-center hover:bg-amber-700 transition-all">Set Up Your Reading Room</a>
+                    </>
+                )}
             </div>
         </div>
     );
