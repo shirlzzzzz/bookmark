@@ -1,9 +1,12 @@
 // OurBookmark App
 import React, { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
 import BookshelfShelves from "./components/BookshelfShelves";
 import Auth from './Auth';
+import PublicReadingRoom from './pages/PublicReadingRoom';
+import ReadingRoomSetup from './pages/ReadingRoomSetup';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -95,7 +98,7 @@ const fetchBookCover = async (bookTitle) => {
 
 
 // Main App Component
-export default function App({ user, onSignOut, onOpenAuth }) {
+function MainApp({ user, onSignOut, onOpenAuth }) {
     // Smart default view: Log tab if setup complete, otherwise show onboarding
     const [currentView, setCurrentView] = useState('discover');
     const [children, setChildren] = useState([]);
@@ -3952,4 +3955,19 @@ function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
             </div>
         </div>
     );
+}
+// ─────────────────────────────────────────────────────────────
+// Router wrapper
+// Public Reading Rooms live at: /@username  (e.g. /@shirlz)
+// Everything else stays the same under /*
+// NOTE: Your src/main.jsx must wrap <App/> with <BrowserRouter>.
+// ─────────────────────────────────────────────────────────────
+export default function App(props) {
+  return (
+    <Routes>
+      <Route path="/setup" element={<ReadingRoomSetup />} />
+      <Route path="/:username" element={<PublicReadingRoom />} />
+      <Route path="/*" element={<MainApp {...props} />} />
+    </Routes>
+  );
 }
