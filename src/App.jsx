@@ -3200,7 +3200,7 @@ function OnboardingModal({ onComplete, onSkip }) {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" style={{ fontFamily: "'DM Sans', sans-serif" }}>
                 {/* Progress Bar */}
                 <div className="flex gap-1 mb-6">
                     {[...Array(totalSteps)].map((_, i) => (
@@ -3215,7 +3215,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {step === 1 && (
                     <div className="text-center">
                         <div className="text-5xl mb-4">📖</div>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Your family's reading story</h2>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>Your family's reading story</h2>
                         <p className="text-gray-500 mb-6">From first favorites to the books they outgrow — every story shared lives here.</p>
                         
                         <button 
@@ -3236,7 +3236,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 2: Family Name */}
                 {step === 2 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">What should we call your library?</h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>What should we call your library?</h2>
                         <p className="text-sm text-gray-500 mb-5">This is just for you — make it personal.</p>
                         
                         <input 
@@ -3258,7 +3258,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 3: Who reads with you */}
                 {step === 3 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">Who reads with you?</h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>Who reads with you?</h2>
                         <p className="text-sm text-gray-500 mb-5">Add each reader in your family.</p>
 
                         {kids.map((kid, index) => (
@@ -3310,7 +3310,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 4: What stories do they love (optional) */}
                 {step === 4 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">What kinds of stories do they love?</h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>What kinds of stories do they love?</h2>
                         <p className="text-sm text-gray-500 mb-5">Pick a few — we'll suggest books. (Optional)</p>
 
                         {kids.filter(k => k.name.trim()).map((kid, index) => (
@@ -3346,7 +3346,7 @@ function OnboardingModal({ onComplete, onSkip }) {
                 {/* Step 5: Reading routine */}
                 {step === 5 && (
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">When do stories usually happen?</h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>When do stories usually happen?</h2>
                         <p className="text-sm text-gray-500 mb-5">No pressure — just helps us personalize.</p>
                         
                         <div className="space-y-2 mb-6">
@@ -3458,12 +3458,12 @@ function SettingsModal({
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50" onClick={onClose}>
-            <div className="bg-gradient-to-b from-white to-gray-50 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-gradient-to-b from-white to-gray-50 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()} style={{ fontFamily: "'DM Sans', sans-serif" }}>
                 {/* Header */}
                 <div className="p-6 pb-4 border-b border-gray-100 relative">
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
                     <div className="text-center">
-                        <h2 className="text-lg font-semibold text-gray-800">Reading Home</h2>
+                        <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Reading Home</h2>
                         <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                         <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
                     </div>
