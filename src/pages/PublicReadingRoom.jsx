@@ -575,6 +575,8 @@ export default function PublicReadingRoom() {
           >
             Start your own reading room
           </button>
+          {" "}·{" "}
+          <a href="/reading-room-faq" style={{ color: "#C4873A", fontWeight: 500, textDecoration: "none" }}>FAQ</a>
         </p>
         <p style={{ marginTop: 6, fontSize: "0.72rem", color: "#bbb" }}>
           Links on this page may be affiliate links.

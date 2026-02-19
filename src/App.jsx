@@ -7,6 +7,7 @@ import BookshelfShelves from "./components/BookshelfShelves";
 import Auth from './Auth';
 import PublicReadingRoom from './pages/PublicReadingRoom';
 import ReadingRoomSetup from './pages/ReadingRoomSetup';
+import ReadingRoomFAQ from './pages/ReadingRoomFAQ';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -714,14 +715,6 @@ const [selectedChild, setSelectedChild] = useState(null);
                                         👤 <span className="text-xs">Sign In / Sign Up</span>
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setShowSettings(true)}
-                                    className="px-3 py-1.5 rounded-lg transition-all text-sm flex items-center gap-1"
-                                    style={{ color: '#4A4035' }}
-                                    title="Reading Home"
-                                >
-                                    ⚙️ <span className="text-xs">Reading Home</span>
-                                </button>
                             </div>
                             
                             {hasChildren ? (
@@ -788,56 +781,8 @@ const [selectedChild, setSelectedChild] = useState(null);
                     </div>
                 )}
 
-                {/* Navigation */}
-                <div className="flex bg-white border-b-2 border-gray-200 sticky top-0 z-10">
-                    <button 
-                        className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'discover' 
-                                ? 'border-b-4' 
-                                : 'text-gray-500 border-b-4 border-transparent'
-                        }`}
-                        style={currentView === 'discover' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
-                        onClick={() => setCurrentView('discover')}
-                    >
-                        ✨ Discover
-                    </button>
-                    <button 
-                        className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'library' 
-                                ? 'border-b-4' 
-                                : 'text-gray-500 border-b-4 border-transparent'
-                        }`}
-                        style={currentView === 'library' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
-                        onClick={() => setCurrentView('library')}
-                    >
-                        📚 Library
-                    </button>
-                    <button 
-                        className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'progress' 
-                                ? 'border-b-4' 
-                                : 'text-gray-500 border-b-4 border-transparent'
-                        }`}
-                        style={currentView === 'progress' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
-                        onClick={() => setCurrentView('progress')}
-                    >
-                        📊 Progress
-                    </button>
-                    <button 
-                        className={`flex-1 py-4 text-sm font-medium transition-all ${
-                            currentView === 'bookshelf' 
-                                ? 'border-b-4' 
-                                : 'text-gray-500 border-b-4 border-transparent'
-                        }`}
-                        style={currentView === 'bookshelf' ? { color: '#C4873A', borderColor: '#C4873A' } : {}}
-                        onClick={() => setCurrentView('bookshelf')}
-                    >
-                        📖 Shelf
-                    </button>
-                </div>
-
                 {/* Content */}
-                <div className="p-5">
+                <div className="p-5" style={{ paddingBottom: 80 }}>
                     {currentView === 'discover' && (
                         <DiscoverView 
                             children={children}
@@ -859,7 +804,7 @@ const [selectedChild, setSelectedChild] = useState(null);
                             onCreateGoal={() => setShowCreateSync(true)}
                             onCompleteGoal={completeSync}
                             onDeleteGoal={deleteSync}
-                            onOpenSettings={() => setShowSettings(true)}
+                            onOpenSettings={() => setCurrentView('settings')}
                             selectedChild={selectedChild}
                             onSelectChild={setSelectedChild}
                             familyProfile={familyProfile}
@@ -873,7 +818,7 @@ onLogBook={(book) => {
                         <ProgressView 
                             children={children}
                             logs={logs}
-                            onOpenSettings={() => setShowSettings(true)}
+                            onOpenSettings={() => setCurrentView('settings')}
                             familyProfile={familyProfile}
                             selectedChild={selectedChild}
                             onSelectChild={setSelectedChild}
@@ -892,35 +837,97 @@ onLogBook={(book) => {
                         <BookshelfView 
                             children={children}
                             logs={logs}
-                            onOpenSettings={() => setShowSettings(true)}
+                            onOpenSettings={() => setCurrentView('settings')}
                             familyProfile={familyProfile}
+                        />
+                    )}
+                    {currentView === 'readingroom' && (
+                        <ReadingRoomTab user={user} onSignIn={() => onOpenAuth('signin')} />
+                    )}
+                    {currentView === 'settings' && (
+                        <SettingsTab
+                            familyProfile={familyProfile}
+                            setFamilyProfile={(profile) => {
+                                setFamilyProfile(profile);
+                                setStorageData('mybookmark_family', profile);
+                            }}
+                            children={children}
+                            logs={logs}
+                            onAddChild={() => setShowAddChild(true)}
+                            onDeleteChild={archiveChild}
+                            onUpdateChild={updateChild}
+                            onExport={exportData}
+                            onImport={importData}
+                            user={user}
+                            onSignOut={handleSignOut}
+                            onSignIn={() => onOpenAuth('signin')}
+                            onShareCard={(child) => {
+                                setShareCardChild(child);
+                                setShowShareCard(true);
+                            }}
+                            onGenerateReport={(child) => {
+                                setReportChild(child);
+                                setShowReportModal(true);
+                            }}
+                            onShowAbout={() => setShowAbout(true)}
+                            onShowFAQ={() => setShowFAQ(true)}
                         />
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="border-t border-gray-200 py-6 px-5 text-center bg-gray-50">
-                    <div className="flex justify-center gap-6 text-sm">
-                        <button 
-                            onClick={() => setShowAbout(true)}
-                            className="text-amber-700 hover:text-amber-900 font-medium"
+                {/* Bottom Navigation */}
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '100%',
+                    maxWidth: '672px',
+                    background: '#FAF7F2',
+                    borderTop: '1px solid rgba(0,0,0,0.08)',
+                    display: 'flex',
+                    zIndex: 40,
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                }}>
+                    {[
+                        { id: 'discover', icon: '✨', label: 'Discover' },
+                        { id: 'library', icon: '📚', label: 'Library' },
+                        { id: 'progress', icon: '📊', label: 'Progress' },
+                        { id: 'readingroom', icon: '📖', label: 'Room' },
+                        { id: 'settings', icon: '⚙️', label: 'Settings' },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setCurrentView(tab.id)}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 2,
+                                padding: '10px 0 8px',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: currentView === tab.id ? '#C4873A' : '#8C7F72',
+                                fontFamily: "'DM Sans', sans-serif",
+                                transition: 'color 0.15s',
+                            }}
                         >
-                            About
+                            <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{tab.icon}</span>
+                            <span style={{
+                                fontSize: '0.65rem',
+                                fontWeight: currentView === tab.id ? 600 : 400,
+                                letterSpacing: '0.01em',
+                            }}>{tab.label}</span>
                         </button>
-                        <button 
-                            onClick={() => setShowFAQ(true)}
-                            className="text-amber-700 hover:text-amber-900 font-medium"
-                        >
-                            FAQ
-                        </button>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-3">© 2026 OurBookmark</p>
+                    ))}
                 </div>
 
                 {/* Modals */}
                 {showAddChild && (
                     <AddChildModal 
-                        onClose={() => { setShowAddChild(false); setShowSettings(true); }}
+                        onClose={() => { setShowAddChild(false); setCurrentView('settings'); }}
                         onAdd={addChild}
                     />
                 )}
@@ -997,45 +1004,6 @@ onLogBook={(book) => {
                     />
                 )}
 
-                {/* Settings Modal */}
-                {showSettings && (
-                    <SettingsModal
-                        familyProfile={familyProfile}
-                        setFamilyProfile={(profile) => {
-                            setFamilyProfile(profile);
-                            setStorageData('mybookmark_family', profile);
-                        }}
-                        children={children}
-                        logs={logs}
-                        onAddChild={() => {
-                            setShowSettings(false);
-                            setShowAddChild(true);
-                        }}
-                        onDeleteChild={archiveChild}
-                        logs={logs}
-                        onUpdateChild={updateChild}
-                        onExport={exportData}
-                        onImport={importData}
-                        onClose={() => setShowSettings(false)}
-                        user={user}
-                        onSignOut={handleSignOut}
-                        onSignIn={() => {
-                            setShowSettings(false);
-                            onOpenAuth('signin');
-                        }}
-                    
-                        onShareCard={(child) => {
-                            setShareCardChild(child);
-                            setShowShareCard(true);
-                            setShowSettings(false);
-                        }}
-                        onGenerateReport={(child) => {
-                            setReportChild(child);
-                            setShowReportModal(true);
-                            setShowSettings(false);
-                        }}
-                    />
-                )}
 
                 {/* About Modal */}
                 {showAbout && (
@@ -3405,6 +3373,289 @@ function OnboardingModal({ onComplete, onSkip }) {
     );
 }
 
+// Reading Room Tab
+function ReadingRoomTab({ user, onSignIn }) {
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) { setLoading(false); return; }
+        async function fetchProfile() {
+            const { data } = await supabase
+                .from('profiles')
+                .select('username, display_name, room_is_public')
+                .eq('id', user.id)
+                .single();
+            setProfile(data);
+            setLoading(false);
+        }
+        fetchProfile();
+    }, [user]);
+
+    if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#8C7F72' }}>Loading...</div>;
+
+    // Not logged in
+    if (!user) {
+        return (
+            <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                <div style={{ fontSize: '3rem', marginBottom: 16 }}>📖</div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 600, color: '#1C1712', marginBottom: 8 }}>
+                    Your Reading Room
+                </h2>
+                <p style={{ color: '#4A4035', fontSize: '0.95rem', marginBottom: 8, lineHeight: 1.6 }}>
+                    Create a beautiful public page to share your favorite children's books with the world.
+                </p>
+                <p style={{ color: '#8C7F72', fontSize: '0.85rem', marginBottom: 24, lineHeight: 1.6 }}>
+                    Curate themed shelves, add personal notes, and earn from affiliate links.
+                </p>
+                <button
+                    onClick={onSignIn}
+                    style={{
+                        background: '#C4873A', color: 'white', border: 'none', borderRadius: 12,
+                        padding: '14px 32px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
+                        fontFamily: "'DM Sans', sans-serif", width: '100%', maxWidth: 320,
+                    }}
+                >
+                    Sign In to Get Started
+                </button>
+            </div>
+        );
+    }
+
+    const hasRoom = profile?.username && profile?.room_is_public;
+
+    // Has a room — link to it
+    if (hasRoom) {
+        return (
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <div style={{ fontSize: '3rem', marginBottom: 16 }}>📖</div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 600, color: '#1C1712', marginBottom: 4 }}>
+                    {profile.display_name || profile.username}'s Reading Room
+                </h2>
+                <p style={{ color: '#8C7F72', fontSize: '0.85rem', marginBottom: 24 }}>
+                    ourbookmark.com/@{profile.username}
+                </p>
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <a
+                        href={`/@${profile.username}`}
+                        style={{
+                            background: '#C4873A', color: 'white', border: 'none', borderRadius: 12,
+                            padding: '14px 28px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
+                            fontFamily: "'DM Sans', sans-serif", textDecoration: 'none', display: 'inline-block',
+                        }}
+                    >
+                        View & Edit Your Room
+                    </a>
+                    <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(`https://ourbookmark.com/@${profile.username}`);
+                        }}
+                        style={{
+                            background: 'white', color: '#C4873A', border: '1.5px solid #C4873A', borderRadius: 12,
+                            padding: '14px 28px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
+                            fontFamily: "'DM Sans', sans-serif",
+                        }}
+                    >
+                        Share Link
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // No room yet — promo
+    return (
+        <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 16 }}>📖</div>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', fontWeight: 600, color: '#1C1712', marginBottom: 8 }}>
+                Share Your Favorite Books
+            </h2>
+            <p style={{ color: '#4A4035', fontSize: '0.95rem', marginBottom: 8, lineHeight: 1.6 }}>
+                Create a beautiful public page to share your favorite children's and YA book recommendations.
+            </p>
+            <p style={{ color: '#8C7F72', fontSize: '0.85rem', marginBottom: 24, lineHeight: 1.6 }}>
+                Curate themed shelves, add personal notes, and earn from affiliate links — all in a page that's uniquely yours.
+            </p>
+            <a
+                href="/setup"
+                style={{
+                    display: 'inline-block', background: '#C4873A', color: 'white', border: 'none', borderRadius: 12,
+                    padding: '14px 32px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif", textDecoration: 'none', width: '100%', maxWidth: 320, boxSizing: 'border-box',
+                }}
+            >
+                Create Your Reading Room
+            </a>
+        </div>
+    );
+}
+
+// Settings Tab (inline version)
+function SettingsTab({ 
+    familyProfile, setFamilyProfile, children, logs, 
+    onAddChild, onDeleteChild, onUpdateChild, onExport, onImport, 
+    user, onSignOut, onSignIn, onShareCard, onGenerateReport, 
+    onShowAbout, onShowFAQ 
+}) {
+    const [editingFamily, setEditingFamily] = useState(false);
+    const [familyName, setFamilyName] = useState(familyProfile?.familyName || '');
+    const [editingChild, setEditingChild] = useState(null);
+    const [showArchived, setShowArchived] = useState(false);
+
+    const activeChildren = children.filter(c => !c.archived);
+    const archivedChildren = children.filter(c => c.archived);
+
+    const getChildStats = (child) => {
+        const childLogs = (logs || []).filter(l => l.childId === child.id);
+        const titles = new Set(childLogs.map(l => (l.bookTitle || '').split(' by ')[0]));
+        const totalBooks = titles.size;
+        const totalMinutes = childLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        const bookCounts = {};
+        childLogs.forEach(l => {
+            const title = (l.bookTitle || '').split(' by ')[0];
+            bookCounts[title] = (bookCounts[title] || 0) + 1;
+        });
+        const sorted = Object.entries(bookCounts).sort((a, b) => b[1] - a[1]);
+        const fav = sorted[0] || null;
+        return { totalBooks, totalMinutes, hours, mins, fav };
+    };
+
+    const getEmotionalLine = (child, stats) => {
+        if (stats.totalBooks === 0) return 'Just getting started';
+        if (stats.fav && stats.fav[1] >= 3) return 'In a reread phase';
+        if (stats.totalBooks >= 10) return 'Loves storytime';
+        if (stats.totalMinutes >= 300) return 'A devoted reader';
+        return 'Building the habit';
+    };
+
+    return (
+        <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+            {/* Header */}
+            <div className="text-center mb-6">
+                <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Reading Home</h2>
+                <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
+                <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
+            </div>
+
+            {/* FAMILY SPACE */}
+            <div className="mb-8">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Family Space</div>
+                {editingFamily ? (
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
+                        <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
+                        <div className="flex gap-2">
+                            <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                            <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <div className="font-medium text-gray-800">📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</div>
+                                <div className="text-xs text-gray-500 mt-1">What matters most: building the habit</div>
+                                <div className="text-xs text-gray-500">Your reading routine: flexible</div>
+                            </div>
+                            <button onClick={() => setEditingFamily(true)} className="text-xs text-amber-700 font-medium">Edit</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* READERS */}
+            <div className="mb-8">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Readers</div>
+                <div className="space-y-3">
+                    {activeChildren.map(child => {
+                        const stats = getChildStats(child);
+                        const emotionalLine = getEmotionalLine(child, stats);
+                        return (
+                            <div key={child.id} className="bg-white border border-gray-200 rounded-xl p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div className="font-medium text-gray-800">{child.name}</div>
+                                        <div className="text-xs text-green-600">{emotionalLine}</div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {stats.totalBooks} book{stats.totalBooks !== 1 ? 's' : ''} · {stats.hours > 0 ? `${stats.hours}h ` : ''}{stats.mins}m reading
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setEditingChild(child)} className="text-xs text-amber-700 font-medium">Edit</button>
+                                        <button onClick={() => onDeleteChild(child.id)} className="text-xs text-gray-400 font-medium">Pause</button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                    <button onClick={() => onShareCard(child)} className="flex-1 py-2 bg-pink-50 text-amber-700 rounded-lg text-xs font-medium">🎴 Share</button>
+                                    <button onClick={() => onGenerateReport(child)} className="flex-1 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-medium">📄 Report</button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                {archivedChildren.length > 0 && (
+                    <button onClick={() => setShowArchived(!showArchived)} className="text-xs text-gray-400 mt-3 block">
+                        {showArchived ? 'Hide' : 'Show'} paused readers ({archivedChildren.length})
+                    </button>
+                )}
+                {showArchived && archivedChildren.map(child => (
+                    <div key={child.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-2 opacity-60">
+                        <div className="flex justify-between items-center">
+                            <div className="font-medium text-gray-600">{child.name} (paused)</div>
+                            <button onClick={() => onUpdateChild({ ...child, archived: false })} className="text-xs text-amber-700 font-medium">Resume</button>
+                        </div>
+                    </div>
+                ))}
+                <button onClick={onAddChild} className="w-full mt-3 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-amber-400 hover:text-amber-700 transition-all">+ Add another reader</button>
+            </div>
+
+            {/* YOU */}
+            <div className="mb-8">
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">You</div>
+                {user ? (
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center text-lg">👤</div>
+                            <div>
+                                <div className="font-medium text-gray-800 text-sm">{user.email}</div>
+                                <div className="text-xs text-green-600">Your library is safely saved</div>
+                            </div>
+                        </div>
+                        <button onClick={onSignOut} className="w-full py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 transition-all">Log Out</button>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-gray-200 rounded-xl p-4">
+                        <p className="text-sm text-gray-600 mb-3">Sign in to save your library across devices</p>
+                        <button onClick={onSignIn} className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700">Sign In / Sign Up</button>
+                    </div>
+                )}
+            </div>
+
+            {/* ABOUT & FAQ */}
+            <div className="mb-4">
+                <div className="flex justify-center gap-6 text-sm">
+                    <button onClick={onShowAbout} className="text-amber-700 hover:text-amber-900 font-medium">About</button>
+                    <button onClick={onShowFAQ} className="text-amber-700 hover:text-amber-900 font-medium">FAQ</button>
+                </div>
+                <p className="text-xs text-gray-400 mt-3 text-center">© 2026 OurBookmark</p>
+            </div>
+
+            {editingChild && (
+                <EditChildModal
+                    child={editingChild}
+                    onClose={() => setEditingChild(null)}
+                    onSave={(updatedChild) => {
+                        onUpdateChild(updatedChild);
+                        setEditingChild(null);
+                    }}
+                />
+            )}
+        </div>
+    );
+}
+
 // Reading Home — A place for your family's reading life
 function SettingsModal({ 
     familyProfile, 
@@ -4036,6 +4287,7 @@ export default function App(props) {
   return (
     <Routes>
       <Route path="/setup" element={<ReadingRoomSetup />} />
+      <Route path="/reading-room-faq" element={<ReadingRoomFAQ />} />
       <Route path="/:username" element={<PublicReadingRoom />} />
       <Route path="/*" element={<MainApp {...props} />} />
     </Routes>
