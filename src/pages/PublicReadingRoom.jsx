@@ -714,6 +714,7 @@ function Nav({ onSignup, isOwner }) {
   return (
     <nav className="prr-nav">
       <a className="prr-nav-logo" href="https://ourbookmark.com">📖 OurBookmark</a>
+      {isOwner && <a href="/" className="prr-nav-back">← Back to app</a>}
       {!isOwner && <button className="prr-nav-cta" onClick={onSignup}>Start your shelf</button>}
     </nav>
   );
@@ -769,6 +770,15 @@ const globalCSS = `
   text-decoration: none;
 }
 .prr-nav-cta:hover { background: #E8A85C; }
+.prr-nav-back {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #C4873A;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.prr-nav-back:hover { color: #E8A85C; }
 
 /* ── HERO ── */
 .prr-hero {

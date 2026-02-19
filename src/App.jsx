@@ -3377,6 +3377,7 @@ function OnboardingModal({ onComplete, onSkip }) {
 function ReadingRoomTab({ user, onSignIn }) {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         if (!user) { setLoading(false); return; }
@@ -3447,16 +3448,33 @@ function ReadingRoomTab({ user, onSignIn }) {
                         View & Edit Your Room
                     </a>
                     <button
-                        onClick={() => {
-                            navigator.clipboard.writeText(`https://ourbookmark.com/@${profile.username}`);
+                        onClick={async () => {
+                            try {
+                                await navigator.clipboard.writeText(`https://ourbookmark.com/@${profile.username}`);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                            } catch {
+                                // fallback
+                                const text = `https://ourbookmark.com/@${profile.username}`;
+                                const ta = document.createElement('textarea');
+                                ta.value = text; document.body.appendChild(ta);
+                                ta.select(); document.execCommand('copy');
+                                document.body.removeChild(ta);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                            }
                         }}
                         style={{
-                            background: 'white', color: '#C4873A', border: '1.5px solid #C4873A', borderRadius: 12,
+                            background: copied ? '#6B8F71' : 'white',
+                            color: copied ? 'white' : '#C4873A',
+                            border: copied ? '1.5px solid #6B8F71' : '1.5px solid #C4873A',
+                            borderRadius: 12,
                             padding: '14px 28px', fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
                             fontFamily: "'DM Sans', sans-serif",
+                            transition: 'all 0.2s',
                         }}
                     >
-                        Share Link
+                        {copied ? '✓ Link Copied!' : 'Share Link'}
                     </button>
                 </div>
             </div>
