@@ -150,7 +150,7 @@ export default function ReadingRoomSetup() {
       const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
       const prefix = searchMode === "author" ? "inauthor" : "intitle";
       const q = encodeURIComponent(`${prefix}:"${bookQuery.trim()}"`);
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books&langRestrict=en&key=${apiKey || ''}&t=${Date.now()}`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books&langRestrict=en&key=${apiKey || ''}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -163,8 +163,6 @@ export default function ReadingRoomSetup() {
           const title = (info.title || "").toLowerCase();
           const subtitle = (info.subtitle || "").toLowerCase();
           const categories = (info.categories || []).join(" ").toLowerCase();
-
-          const hasImage = info.imageLinks?.thumbnail;
           const isEnglish = info.language === 'en';
           const isJunk = JUNK.some(kw =>
             title.includes(kw) ||
@@ -172,18 +170,31 @@ export default function ReadingRoomSetup() {
             categories.includes("business") ||
             categories.includes("study")
           );
-
-          return hasImage && isEnglish && !isJunk;
+          return isEnglish && !isJunk;
         })
         .map((item) => {
           const v = item.volumeInfo;
+
+          // 1. Get best available ISBN
+          const isbn13 = v.industryIdentifiers?.find(i => i.type === "ISBN_13")?.identifier;
+          const isbn10 = v.industryIdentifiers?.find(i => i.type === "ISBN_10")?.identifier;
+          const bestIsbn = isbn13 || isbn10;
+
+          // 2. Try Google cover first
+          let finalCover = v.imageLinks?.thumbnail?.replace("http:", "https:") || null;
+
+          // 3. Fallback to Open Library if Google has no cover but we have an ISBN
+          if (!finalCover && bestIsbn) {
+            finalCover = `https://covers.openlibrary.org/b/isbn/${bestIsbn}-M.jpg?default=false`;
+          }
+
           return {
             google_books_id: item.id,
             title: v.title,
             author: (v.authors || []).join(", "),
-            cover_url: v.imageLinks.thumbnail.replace("http:", "https:"),
-            isbn_13: v.industryIdentifiers?.find(i => i.type === "ISBN_13")?.identifier || null,
-            isbn_10: v.industryIdentifiers?.find(i => i.type === "ISBN_10")?.identifier || null,
+            cover_url: finalCover || null,
+            isbn_13: isbn13 || null,
+            isbn_10: isbn10 || null,
           };
         });
 
