@@ -3715,6 +3715,42 @@ function SettingsTab({
 
     return (
         <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+
+            {/* ── NOT SIGNED IN: Show join screen ── */}
+            {!user && (
+                <div className="text-center py-12 px-4">
+                    <div className="text-5xl mb-4">📚</div>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                        Join OurBookmark
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-1">
+                        Track your family's reading, curate shelves,
+                    </p>
+                    <p className="text-sm text-gray-500 mb-6">
+                        and share your favorites.
+                    </p>
+                    <button
+                        onClick={onSignIn}
+                        className="w-full max-w-xs mx-auto block px-6 py-3 bg-amber-600 text-white rounded-xl text-sm font-semibold hover:bg-amber-700 transition-colors mb-3"
+                    >
+                        Sign Up / Sign In
+                    </button>
+                    <p className="text-xs text-gray-400 mt-4">
+                        Free forever · No credit card needed
+                    </p>
+
+                    <div className="mt-10 pt-6 border-t border-gray-100">
+                        <div className="flex justify-center gap-6">
+                            <button onClick={onShowAbout} className="text-sm text-amber-700 hover:text-amber-900 font-medium">About</button>
+                            <button onClick={onShowFAQ} className="text-sm text-amber-700 hover:text-amber-900 font-medium">FAQ</button>
+                        </div>
+                        <p className="text-xs text-gray-300 mt-3">© 2026 OurBookmark</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── SIGNED IN: Full settings ── */}
+            {user && (<>
             {/* Header */}
             <div className="text-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Reading Home</h2>
@@ -3835,6 +3871,7 @@ function SettingsTab({
                     }}
                 />
             )}
+            </>)}
         </div>
     );
 }
