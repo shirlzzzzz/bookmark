@@ -3735,9 +3735,6 @@ function SettingsTab({
                     >
                         Sign Up / Sign In
                     </button>
-                    <p className="text-xs text-gray-400 mt-4">
-                        Free forever · No credit card needed
-                    </p>
 
                     <div className="mt-10 pt-6 border-t border-gray-100">
                         <div className="flex justify-center gap-6">

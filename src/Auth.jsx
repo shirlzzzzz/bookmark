@@ -60,7 +60,7 @@ export default function Auth({ startMode = 'signin', onClose }) {
       >
         <div className="flex justify-between items-center p-6 pb-4 border-b">
           <h2 className="text-xl font-semibold text-gray-800">
-            {isSignUp ? 'Create an account' : 'Sign in to My Bookmark'}
+            {isSignUp ? 'Create an account' : 'Sign in to OurBookmark'}
           </h2>
           <button
             onClick={onClose}
@@ -79,7 +79,7 @@ export default function Auth({ startMode = 'signin', onClose }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             )}
 
@@ -89,7 +89,7 @@ export default function Auth({ startMode = 'signin', onClose }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
 
             <input
@@ -98,13 +98,13 @@ export default function Auth({ startMode = 'signin', onClose }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3 text-base focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-purple-600 text-white py-3 rounded-lg font-medium hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-amber-600 text-white py-3 rounded-lg font-medium hover:bg-amber-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Working...' : (isSignUp ? 'Create Account' : 'Sign In')}
             </button>
@@ -117,7 +117,7 @@ export default function Auth({ startMode = 'signin', onClose }) {
                   setIsSignUp(!isSignUp)
                   setMessage('')
                 }}
-                className="text-purple-600 hover:text-purple-800 font-medium"
+                className="text-amber-700 hover:text-amber-900 font-medium"
               >
                 {isSignUp ? 'Sign In' : 'Sign Up'}
               </button>
