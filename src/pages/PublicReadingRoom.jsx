@@ -67,6 +67,7 @@ export default function PublicReadingRoom() {
 
   // Bio editing (via Edit profile panel)
   const [bioValue, setBioValue] = useState("");
+  const [affiliateValue, setAffiliateValue] = useState("");
 
   // Hero customization
   const [heroEditMode, setHeroEditMode] = useState(false);
@@ -229,8 +230,9 @@ export default function PublicReadingRoom() {
     await supabase.from("profiles").update({
       bio: trimmed,
       header_widgets: headerConfig,
+      affiliate_amazon: affiliateValue.trim() || null,
     }).eq("id", profile.id);
-    setProfile({ ...profile, bio: trimmed });
+    setProfile({ ...profile, bio: trimmed, affiliate_amazon: affiliateValue.trim() || null });
     setSavingHeader(false);
     setHeroEditMode(false);
   }
@@ -281,6 +283,7 @@ export default function PublicReadingRoom() {
       }
       setProfile(p);
       setBioValue(p.bio || "");
+      setAffiliateValue(p.affiliate_amazon || "");
       if (p.header_widgets) {
         setHeaderConfig((prev) => ({ ...prev, ...p.header_widgets }));
       }
@@ -488,6 +491,16 @@ export default function PublicReadingRoom() {
                   setHeaderConfig(c => ({ ...c, socialLinks: { ...c.socialLinks, links: [...(c.socialLinks?.links || []), { platform: "", url: "" }] } }))
                 }>+ Add another link</button>
               )}
+            </div>
+
+            {/* AMAZON AFFILIATE TAG */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#4A4035", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Amazon Affiliate Tag</label>
+              <p style={{ fontSize: "0.78rem", color: "#8C7F72", marginBottom: 8 }}>Your Associates tracking ID (e.g. <code>yourtag-20</code>). Added to all book links automatically.</p>
+              <input className="prr-inline-input" placeholder="e.g. yourtag-20"
+                value={affiliateValue}
+                onChange={(e) => setAffiliateValue(e.target.value)}
+                style={{ maxWidth: 280 }} />
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
