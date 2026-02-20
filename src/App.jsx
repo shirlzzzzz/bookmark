@@ -8,7 +8,6 @@ import Auth from './Auth';
 import PublicReadingRoom from './pages/PublicReadingRoom';
 import ReadingRoomSetup from './pages/ReadingRoomSetup';
 import ReadingRoomFAQ from './pages/ReadingRoomFAQ';
-import AdminPage from './pages/AdminPage';
 // Utility functions
 const getStorageData = (key, defaultValue = []) => {
     try {
@@ -122,9 +121,7 @@ const [selectedChild, setSelectedChild] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
     const [showAbout, setShowAbout] = useState(false);
     const [showFAQ, setShowFAQ] = useState(false);
-    const [showOnboarding, setShowOnboarding] = useState(() => {
-        return !localStorage.getItem('mybookmark_onboarded');
-    });
+    const [showOnboarding, setShowOnboarding] = useState(false); // Disabled - users explore first, sign up when they act
     const [showShareCard, setShowShareCard] = useState(false);
     const [shareCardChild, setShareCardChild] = useState(null);
     const [celebration, setCelebration] = useState(null); // { childName, bookTitle }
@@ -1638,6 +1635,68 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
             { title: 'Stuart Little', author: 'E.B. White', cover: 'https://covers.openlibrary.org/b/isbn/9780064400565-L.jpg' },
             { title: 'The Cricket in Times Square', author: 'George Selden', cover: 'https://covers.openlibrary.org/b/isbn/9780312380038-L.jpg' },
         ],
+
+        // ── LEARNING GOALS (Toddler Literacy) ──
+        rhyme: [
+            { title: 'Chicka Chicka Boom Boom', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9781442450707-L.jpg' },
+            { title: 'Llama Llama Red Pajama', author: 'Anna Dewdney', cover: 'https://covers.openlibrary.org/b/isbn/9780670059836-L.jpg' },
+            { title: 'Each Peach Pear Plum', author: 'Janet & Allan Ahlberg', cover: 'https://covers.openlibrary.org/b/isbn/9780670882786-L.jpg' },
+            { title: 'Room on the Broom', author: 'Julia Donaldson', cover: 'https://covers.openlibrary.org/b/isbn/9780142501122-L.jpg' },
+            { title: 'Jamberry', author: 'Bruce Degen', cover: 'https://covers.openlibrary.org/b/isbn/9780694006519-L.jpg' },
+            { title: 'Down by the Bay', author: 'Raffi', cover: 'https://covers.openlibrary.org/b/isbn/9780517566459-L.jpg' },
+        ],
+        animalsounds: [
+            { title: 'Brown Bear, Brown Bear, What Do You See?', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9780805047905-L.jpg' },
+            { title: 'Moo, Baa, La La La!', author: 'Sandra Boynton', cover: 'https://covers.openlibrary.org/b/isbn/9780671449018-L.jpg' },
+            { title: 'Click, Clack, Moo', author: 'Doreen Cronin', cover: 'https://covers.openlibrary.org/b/isbn/9780689832130-L.jpg' },
+            { title: 'Polar Bear, Polar Bear, What Do You Hear?', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9780805053883-L.jpg' },
+            { title: 'Dear Zoo', author: 'Rod Campbell', cover: 'https://covers.openlibrary.org/b/isbn/9781416947370-L.jpg' },
+            { title: 'The Pout-Pout Fish', author: 'Deborah Diesen', cover: 'https://covers.openlibrary.org/b/isbn/9780374360979-L.jpg' },
+        ],
+        labeling: [
+            { title: 'First 100 Words', author: 'Roger Priddy', cover: 'https://covers.openlibrary.org/b/isbn/9780312510787-L.jpg' },
+            { title: 'Baby Touch and Feel: Animals', author: 'DK', cover: 'https://covers.openlibrary.org/b/isbn/9780756634681-L.jpg' },
+            { title: 'My First Word Book', author: 'Angela Wilkes', cover: 'https://covers.openlibrary.org/b/isbn/9781564582041-L.jpg' },
+            { title: 'Toes, Ears, & Nose!', author: 'Marion Dane Bauer', cover: 'https://covers.openlibrary.org/b/isbn/9780689847127-L.jpg' },
+            { title: 'From Head to Toe', author: 'Eric Carle', cover: 'https://covers.openlibrary.org/b/isbn/9780064435963-L.jpg' },
+        ],
+        causeeffect: [
+            { title: 'Dear Zoo', author: 'Rod Campbell', cover: 'https://covers.openlibrary.org/b/isbn/9781416947370-L.jpg' },
+            { title: 'Where\'s Spot?', author: 'Eric Hill', cover: 'https://covers.openlibrary.org/b/isbn/9780399240461-L.jpg' },
+            { title: 'Press Here', author: 'Hervé Tullet', cover: 'https://covers.openlibrary.org/b/isbn/9780811879545-L.jpg' },
+            { title: 'Pat the Bunny', author: 'Dorothy Kunhardt', cover: 'https://covers.openlibrary.org/b/isbn/9780307120007-L.jpg' },
+            { title: 'Peek-a-Who?', author: 'Nina Laden', cover: 'https://covers.openlibrary.org/b/isbn/9780811826020-L.jpg' },
+        ],
+        patterns: [
+            { title: 'The Very Hungry Caterpillar', author: 'Eric Carle', cover: 'https://covers.openlibrary.org/b/isbn/9780399226908-L.jpg' },
+            { title: 'We\'re Going on a Bear Hunt', author: 'Michael Rosen', cover: 'https://covers.openlibrary.org/b/isbn/9780689853494-L.jpg' },
+            { title: 'If You Give a Mouse a Cookie', author: 'Laura Numeroff', cover: 'https://covers.openlibrary.org/b/isbn/9780060245863-L.jpg' },
+            { title: 'Brown Bear, Brown Bear, What Do You See?', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9780805047905-L.jpg' },
+            { title: 'The Napping House', author: 'Audrey Wood', cover: 'https://covers.openlibrary.org/b/isbn/9780152567088-L.jpg' },
+            { title: 'Goodnight Gorilla', author: 'Peggy Rathmann', cover: 'https://covers.openlibrary.org/b/isbn/9780399230035-L.jpg' },
+        ],
+        earlymath: [
+            { title: 'Ten Little Fingers and Ten Little Toes', author: 'Mem Fox', cover: 'https://covers.openlibrary.org/b/isbn/9780152060572-L.jpg' },
+            { title: 'Chicka Chicka 1, 2, 3', author: 'Bill Martin Jr.', cover: 'https://covers.openlibrary.org/b/isbn/9780689858819-L.jpg' },
+            { title: 'Mouse Count', author: 'Ellen Stoll Walsh', cover: 'https://covers.openlibrary.org/b/isbn/9780152002237-L.jpg' },
+            { title: 'The Very Hungry Caterpillar', author: 'Eric Carle', cover: 'https://covers.openlibrary.org/b/isbn/9780399226908-L.jpg' },
+            { title: 'Five Little Monkeys Jumping on the Bed', author: 'Eileen Christelow', cover: 'https://covers.openlibrary.org/b/isbn/9780395557013-L.jpg' },
+        ],
+        bedtime: [
+            { title: 'Goodnight Moon', author: 'Margaret Wise Brown', cover: 'https://covers.openlibrary.org/b/isbn/9780694003617-L.jpg' },
+            { title: 'Time for Bed', author: 'Mem Fox', cover: 'https://covers.openlibrary.org/b/isbn/9780152010669-L.jpg' },
+            { title: 'The Going to Bed Book', author: 'Sandra Boynton', cover: 'https://covers.openlibrary.org/b/isbn/9780671449025-L.jpg' },
+            { title: 'Pajama Time!', author: 'Sandra Boynton', cover: 'https://covers.openlibrary.org/b/isbn/9780761119753-L.jpg' },
+            { title: 'On the Night You Were Born', author: 'Nancy Tillman', cover: 'https://covers.openlibrary.org/b/isbn/9780312601553-L.jpg' },
+        ],
+        emotions: [
+            { title: 'Llama Llama Red Pajama', author: 'Anna Dewdney', cover: 'https://covers.openlibrary.org/b/isbn/9780670059836-L.jpg' },
+            { title: 'The Feelings Book', author: 'Todd Parr', cover: 'https://covers.openlibrary.org/b/isbn/9780316012492-L.jpg' },
+            { title: 'Grumpy Monkey', author: 'Suzanne Lang', cover: 'https://covers.openlibrary.org/b/isbn/9780553537864-L.jpg' },
+            { title: 'In My Heart: A Book of Feelings', author: 'Jo Witek', cover: 'https://covers.openlibrary.org/b/isbn/9781419713101-L.jpg' },
+            { title: 'The Color Monster', author: 'Anna Llenas', cover: 'https://covers.openlibrary.org/b/isbn/9780316450010-L.jpg' },
+            { title: 'When Sophie Gets Angry', author: 'Molly Bang', cover: 'https://covers.openlibrary.org/b/isbn/9780590189798-L.jpg' },
+        ],
     };
 
     const seasonalBooks = CURATED_BOOKS.seasonal[seasonal.key] || CURATED_BOOKS.seasonal.summer;
@@ -1834,8 +1893,113 @@ function DiscoverView({ children, onLogBook, familyProfile }) {
                     </div>
 
                     {/* Expanded age section */}
-                    {expandedSection && CURATED_BOOKS[expandedSection] && (
+                    {expandedSection && ['board','picture','chapter','middlegrade'].includes(expandedSection) && CURATED_BOOKS[expandedSection] && (
                         <div className="mb-6">
+                            <div className="grid grid-cols-3 gap-3">
+                                {CURATED_BOOKS[expandedSection].map((book, i) => (
+                                    <BookCard key={i} book={book} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── LEARNING GOALS ── */}
+                    <div className="mb-6">
+                        <h3 className="text-base font-semibold text-gray-800 mb-1">🧒 Early Literacy Goals</h3>
+                        <p className="text-xs text-gray-500 mb-3">Books that build real reading skills — tap to explore</p>
+                        
+                        {/* Sounds & Language */}
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">🔊 Sounds & Language</p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            {[
+                                { key: 'rhyme', label: '🎵 Rhyme & Rhythm', sub: 'Hearing sounds in words' },
+                                { key: 'animalsounds', label: '🐻 Animal Sounds', sub: 'Voice & mouth muscles' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
+                                    className={`p-3 rounded-xl text-left transition-all ${
+                                        expandedSection === cat.key 
+                                            ? 'bg-amber-100 border-2 border-amber-300' 
+                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                                    <div className="text-xs text-gray-500">{cat.sub}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Print Awareness */}
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">📖 Print Awareness</p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            {[
+                                { key: 'labeling', label: '🏷️ Object Labeling', sub: 'Building a word bank' },
+                                { key: 'causeeffect', label: '🎪 Cause & Effect', sub: 'Lift-the-flap & interactive' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
+                                    className={`p-3 rounded-xl text-left transition-all ${
+                                        expandedSection === cat.key 
+                                            ? 'bg-amber-100 border-2 border-amber-300' 
+                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                                    <div className="text-xs text-gray-500">{cat.sub}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Cognitive & Narrative */}
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">🧠 Cognitive & Narrative</p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            {[
+                                { key: 'patterns', label: '🔁 Predictable Patterns', sub: 'Finish-the-sentence books' },
+                                { key: 'earlymath', label: '🔢 Early Math & Logic', sub: 'Counting, shapes, sizes' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
+                                    className={`p-3 rounded-xl text-left transition-all ${
+                                        expandedSection === cat.key 
+                                            ? 'bg-amber-100 border-2 border-amber-300' 
+                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                                    <div className="text-xs text-gray-500">{cat.sub}</div>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Social-Emotional */}
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">💛 Social-Emotional</p>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            {[
+                                { key: 'bedtime', label: '😴 Bedtime & Comfort', sub: 'Calming routines' },
+                                { key: 'emotions', label: '🌈 Big Feelings', sub: 'Naming & managing emotions' },
+                            ].map(cat => (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => setExpandedSection(expandedSection === cat.key ? null : cat.key)}
+                                    className={`p-3 rounded-xl text-left transition-all ${
+                                        expandedSection === cat.key 
+                                            ? 'bg-amber-100 border-2 border-amber-300' 
+                                            : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <div className="text-sm font-medium text-gray-800">{cat.label}</div>
+                                    <div className="text-xs text-gray-500">{cat.sub}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Expanded learning goal section */}
+                    {expandedSection && CURATED_BOOKS[expandedSection] && !['board','picture','chapter','middlegrade'].includes(expandedSection) && (
+                        <div className="mb-6 -mt-4">
                             <div className="grid grid-cols-3 gap-3">
                                 {CURATED_BOOKS[expandedSection].map((book, i) => (
                                     <BookCard key={i} book={book} />
@@ -4307,7 +4471,6 @@ export default function App(props) {
     <Routes>
       <Route path="/setup" element={<ReadingRoomSetup />} />
       <Route path="/reading-room-faq" element={<ReadingRoomFAQ />} />
-      <Route path="/admin" element={<AdminPage />} />
       <Route path="/:username" element={<PublicReadingRoom />} />
       <Route path="/*" element={<MainApp {...props} />} />
     </Routes>
