@@ -464,10 +464,7 @@ export default function PublicReadingRoom() {
 
           <div className="prr-profile-actions">
             <button className="prr-btn-share" onClick={handleShare}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
-              </svg>
-              {shareCopied ? "Link copied!" : "Share Reading Room"}
+              {shareCopied ? "✓ Link copied!" : "Share 🔗"}
             </button>
             {isOwner && (
               <button className="prr-btn-share" onClick={() => setHeroEditMode(v => !v)}
@@ -1572,7 +1569,7 @@ const globalCSS = `
   cursor: pointer;
   transition: transform 0.2s;
   display: block;
-  flex: 0 0 140px;
+  flex: 0 0 110px;
   scroll-snap-align: start;
 }
 .prr-book-card:hover { transform: translateY(-4px); }
@@ -1617,11 +1614,12 @@ const globalCSS = `
 .prr-book-cover-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 8px;
   position: absolute;
   top: 0;
   left: 0;
+  background: #f0ebe4;
 }
 .prr-book-card-info { margin-top: 10px; }
 .prr-bci-title {
@@ -1971,7 +1969,7 @@ const globalCSS = `
 .prr-inline-result-add:hover { background: #5C7A5C; }
 
 /* ── BOOK REMOVE ── */
-.prr-book-card-wrap { position: relative; flex: 0 0 140px; scroll-snap-align: start; }
+.prr-book-card-wrap { position: relative; flex: 0 0 110px; scroll-snap-align: start; }
 .prr-book-remove {
   position: absolute; top: -6px; right: -6px; z-index: 2;
   width: 24px; height: 24px; border-radius: 50%;
