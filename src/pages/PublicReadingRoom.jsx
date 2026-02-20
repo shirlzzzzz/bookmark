@@ -76,6 +76,9 @@ export default function PublicReadingRoom() {
   const [editError, setEditError] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const [editingShelfId, setEditingShelfId] = useState(null);
+  const [editingShelfName, setEditingShelfName] = useState("");
+  const [editingShelfDesc, setEditingShelfDesc] = useState("");
 
   // Bio editing (via Edit profile panel)
   const [bioValue, setBioValue] = useState("");
@@ -197,6 +200,39 @@ export default function PublicReadingRoom() {
       is_visible: true, display_order: shelves.length,
     });
     setNewShelfName(""); setNewShelfDesc(""); setShowNewShelf(false); setSavingShelf(false);
+    await reloadData();
+  }
+
+  async function renameShelf(shelfId) {
+    if (!editingShelfName.trim()) return;
+    await supabase.from("shelves").update({
+      name: editingShelfName.trim(),
+      description: editingShelfDesc.trim(),
+    }).eq("id", shelfId);
+    setEditingShelfId(null);
+    setEditingShelfName("");
+    setEditingShelfDesc("");
+    await reloadData();
+  }
+
+  async function moveShelf(shelfId, direction) {
+    const idx = shelves.findIndex(s => s.id === shelfId);
+    if (idx < 0) return;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= shelves.length) return;
+    const a = shelves[idx];
+    const b = shelves[swapIdx];
+    await Promise.all([
+      supabase.from("shelves").update({ display_order: swapIdx }).eq("id", a.id),
+      supabase.from("shelves").update({ display_order: idx }).eq("id", b.id),
+    ]);
+    await reloadData();
+  }
+
+  async function deleteShelf(shelfId) {
+    if (!window.confirm("Delete this shelf and remove all its books? This can't be undone.")) return;
+    await supabase.from("shelf_books").delete().eq("shelf_id", shelfId);
+    await supabase.from("shelves").delete().eq("id", shelfId);
     await reloadData();
   }
 
@@ -673,16 +709,55 @@ export default function PublicReadingRoom() {
               return (
                 <div key={shelf.id} className="prr-shelf-section">
                   <div className="prr-section-header">
-                    <div className="prr-section-title">
-                      <span className="prr-emoji">📚</span> {shelf.name}
-                      <span className="prr-section-count">
-                        {items.length} {items.length === 1 ? "book" : "books"}
-                      </span>
-                    </div>
-                    {isOwner && !isAdding && (
-                      <button className="prr-inline-add-btn" onClick={() => { setAddingToShelf(shelf.id); setBookQuery(""); setBookResults([]); setEditError(""); }}>
-                        + Add Book
-                      </button>
+                    {editingShelfId === shelf.id ? (
+                      <div style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={editingShelfName}
+                          onChange={(e) => setEditingShelfName(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && renameShelf(shelf.id)}
+                          className="prr-inline-input"
+                          autoFocus
+                          style={{ fontWeight: 600, fontSize: "1.05rem", marginBottom: 6 }}
+                          placeholder="Shelf name"
+                        />
+                        <input
+                          type="text"
+                          value={editingShelfDesc}
+                          onChange={(e) => setEditingShelfDesc(e.target.value)}
+                          className="prr-inline-input"
+                          style={{ fontSize: "0.85rem" }}
+                          placeholder="Description (optional)"
+                        />
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <button className="prr-inline-search-btn" onClick={() => renameShelf(shelf.id)}>Save</button>
+                          <button className="prr-inline-cancel-text" onClick={() => setEditingShelfId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="prr-section-title">
+                          <span className="prr-emoji">📚</span> {shelf.name}
+                          <span className="prr-section-count">
+                            {items.length} {items.length === 1 ? "book" : "books"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          {isOwner && (
+                            <>
+                              <button className="prr-shelf-action" onClick={() => moveShelf(shelf.id, "up")} title="Move up" disabled={shelves.indexOf(shelf) === 0}>↑</button>
+                              <button className="prr-shelf-action" onClick={() => moveShelf(shelf.id, "down")} title="Move down" disabled={shelves.indexOf(shelf) === shelves.length - 1}>↓</button>
+                              <button className="prr-shelf-action" onClick={() => { setEditingShelfId(shelf.id); setEditingShelfName(shelf.name); setEditingShelfDesc(shelf.description || ""); }} title="Edit shelf">✏️</button>
+                              <button className="prr-shelf-action prr-shelf-delete" onClick={() => deleteShelf(shelf.id)} title="Delete shelf">🗑</button>
+                            </>
+                          )}
+                          {isOwner && !isAdding && (
+                            <button className="prr-inline-add-btn" onClick={() => { setAddingToShelf(shelf.id); setBookQuery(""); setBookResults([]); setEditError(""); }}>
+                              + Add Book
+                            </button>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -1233,8 +1308,10 @@ const globalCSS = `
 .prr-section-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .prr-section-title {
   font-family: 'Playfair Display', serif;
@@ -1782,9 +1859,6 @@ const globalCSS = `
 .prr-avatar-edit:hover { transform: scale(1.1); }
 
 /* ── INLINE EDITING ── */
-.prr-section-header {
-  display: flex; justify-content: space-between; align-items: center;
-}
 .prr-inline-add-btn {
   background: #C4873A; color: white; border: none;
   padding: 6px 16px; border-radius: 100px;
@@ -1891,6 +1965,27 @@ const globalCSS = `
   font-family: 'DM Sans', sans-serif; transition: all 0.15s;
 }
 .prr-new-shelf-btn:hover { border-color: #C4873A; background: rgba(196,135,58,0.04); }
+
+/* ── SHELF ACTIONS ── */
+.prr-shelf-action {
+  background: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: #8C7F72;
+  transition: all 0.15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.prr-shelf-action:hover { background: #F5EFE7; border-color: #C4873A; color: #C4873A; }
+.prr-shelf-action:disabled { opacity: 0.3; cursor: default; }
+.prr-shelf-action:disabled:hover { background: none; border-color: rgba(0,0,0,0.1); color: #8C7F72; }
+.prr-shelf-delete:hover { background: #FEF2F2; border-color: #c0392b; color: #c0392b; }
 .prr-new-shelf-form {
   background: white; border: 1.5px solid rgba(0,0,0,0.1);
   border-radius: 16px; padding: 20px; margin-top: 20px;
