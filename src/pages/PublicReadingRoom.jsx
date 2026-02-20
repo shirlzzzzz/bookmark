@@ -496,7 +496,7 @@ export default function PublicReadingRoom() {
                 style={{
                   width: "100%", padding: "10px 14px",
                   border: "1.5px solid rgba(0,0,0,0.12)", borderRadius: 12,
-                  fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem",
+                  fontSize: "0.95rem",
                   lineHeight: 1.6, color: "#1C1712", background: "#FAF7F2",
                   outline: "none", resize: "vertical", boxSizing: "border-box",
                   minHeight: 80, transition: "border-color 0.2s",
@@ -614,7 +614,7 @@ export default function PublicReadingRoom() {
               )}
               <div>
                 <div className="prr-stat-label" style={{ marginBottom: 2 }}>📖 reading now</div>
-                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#1C1712", lineHeight: 1.2 }}>{headerConfig.currentlyReading.title}</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#1C1712", lineHeight: 1.2 }}>{headerConfig.currentlyReading.title}</div>
                 {headerConfig.currentlyReading.author && <div style={{ fontSize: "0.72rem", color: "#8C7F72", marginTop: 1 }}>{headerConfig.currentlyReading.author}</div>}
               </div>
             </div>
@@ -624,14 +624,14 @@ export default function PublicReadingRoom() {
           {headerConfig.genreAgeGroup?.enabled && headerConfig.genreAgeGroup?.value && (
             <div className="prr-stat" style={{ borderLeft: "1px solid rgba(196,135,58,0.2)", paddingLeft: 20 }}>
               <div className="prr-stat-label" style={{ marginBottom: 2 }}>📚 reads</div>
-              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#1C1712" }}>{headerConfig.genreAgeGroup.value}</div>
+              <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#1C1712" }}>{headerConfig.genreAgeGroup.value}</div>
             </div>
           )}
 
           {/* Owner: customize link */}
           {isOwner && !statsEditMode && (
             <button onClick={() => setStatsEditMode(true)}
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "#C4873A", fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", padding: "4px 8px", borderRadius: 8, transition: "background 0.15s", flexShrink: 0 }}
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#C4873A", fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", padding: "4px 8px", borderRadius: 8, transition: "background 0.15s", flexShrink: 0 }}
               onMouseEnter={e => e.currentTarget.style.background = "rgba(196,135,58,0.08)"}
               onMouseLeave={e => e.currentTarget.style.background = "none"}>
               + Customize
@@ -639,7 +639,7 @@ export default function PublicReadingRoom() {
           )}
           {isOwner && statsEditMode && (
             <button onClick={() => setStatsEditMode(false)}
-              style={{ marginLeft: "auto", background: "none", border: "none", color: "#8C7F72", fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", padding: "4px 8px", flexShrink: 0 }}>
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#8C7F72", fontSize: "0.78rem", cursor: "pointer", padding: "4px 8px", flexShrink: 0 }}>
               Done
             </button>
           )}
@@ -1147,7 +1147,6 @@ const globalCSS = `
   border: none;
   padding: 9px 20px;
   border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -1156,7 +1155,6 @@ const globalCSS = `
 }
 .prr-nav-cta:hover { background: #E8A85C; }
 .prr-nav-back {
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
   color: #C4873A;
@@ -1235,7 +1233,6 @@ const globalCSS = `
   border: 1.5px solid rgba(0,0,0,0.15);
   padding: 9px 18px;
   border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -1268,7 +1265,6 @@ const globalCSS = `
   transition: all 0.2s;
   white-space: nowrap;
   background: none;
-  font-family: 'DM Sans', sans-serif;
 }
 .prr-shelf-tab:hover { color: #1C1712; }
 .prr-shelf-tab.active {
@@ -1333,7 +1329,6 @@ const globalCSS = `
   font-size: 0.82rem;
   color: #8C7F72;
   font-weight: 400;
-  font-family: 'DM Sans', sans-serif;
 }
 
 /* ── BOOKSHELF (SPINE VIEW) ── */
@@ -1650,7 +1645,6 @@ const globalCSS = `
 .prr-store-btn {
   padding: 4px 8px;
   border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.62rem;
   font-weight: 500;
   text-decoration: none;
@@ -1784,7 +1778,6 @@ const globalCSS = `
   color: white;
   padding: 14px 32px;
   border-radius: 100px;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.95rem;
   font-weight: 500;
   text-decoration: none;
@@ -1831,7 +1824,6 @@ const globalCSS = `
   padding: 12px 16px;
   border: 1.5px solid rgba(0,0,0,0.12);
   border-radius: 12px;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.92rem;
   background: white;
   color: #1C1712;
@@ -1860,7 +1852,6 @@ const globalCSS = `
   font-size: 0.82rem;
   cursor: pointer;
   margin-top: 8px;
-  font-family: 'DM Sans', sans-serif;
   transition: color 0.15s;
 }
 .prr-modal-back:hover { color: #1C1712; }
@@ -1888,7 +1879,7 @@ const globalCSS = `
   background: #C4873A; color: white; border: none;
   padding: 6px 16px; border-radius: 100px;
   font-size: 0.8rem; font-weight: 500; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+  transition: background 0.15s;
 }
 .prr-inline-add-btn:hover { background: #E8A85C; }
 .prr-inline-add-link {
@@ -1906,7 +1897,7 @@ const globalCSS = `
 .prr-inline-input {
   flex: 1; padding: 10px 14px;
   border: 1.5px solid rgba(0,0,0,0.1); border-radius: 10px;
-  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  font-size: 0.9rem;
   background: #FAF7F2; color: #1C1712; outline: none;
   transition: border-color 0.2s;
 }
@@ -1915,7 +1906,7 @@ const globalCSS = `
 .prr-inline-search-btn {
   padding: 10px 18px; background: #C4873A; color: white;
   border: none; border-radius: 10px; font-size: 0.85rem;
-  font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  font-weight: 500; cursor: pointer;
   white-space: nowrap; transition: background 0.15s;
 }
 .prr-inline-search-btn:hover { background: #E8A85C; }
@@ -1930,7 +1921,7 @@ const globalCSS = `
 .prr-inline-cancel:hover { border-color: #c0392b; color: #c0392b; }
 .prr-inline-cancel-text {
   background: none; border: none; color: #8C7F72;
-  font-size: 0.88rem; font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
   cursor: pointer; padding: 8px 16px; transition: color 0.15s;
 }
 .prr-inline-cancel-text:hover { color: #1C1712; }
@@ -1963,7 +1954,7 @@ const globalCSS = `
 .prr-inline-result-add {
   background: #6B8F71; color: white; border: none;
   padding: 5px 12px; border-radius: 100px; font-size: 0.75rem;
-  font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  font-weight: 500; cursor: pointer;
   white-space: nowrap; flex-shrink: 0; transition: background 0.15s;
 }
 .prr-inline-result-add:hover { background: #5C7A5C; }
@@ -1987,7 +1978,7 @@ const globalCSS = `
   border: 2px dashed rgba(0,0,0,0.12); border-radius: 16px;
   background: transparent; color: #C4873A;
   font-size: 0.9rem; font-weight: 500; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  transition: all 0.15s;
 }
 .prr-new-shelf-btn:hover { border-color: #C4873A; background: rgba(196,135,58,0.04); }
 
@@ -2005,7 +1996,6 @@ const globalCSS = `
   font-size: 0.72rem;
   color: #8C7F72;
   transition: all 0.15s;
-  font-family: 'DM Sans', sans-serif;
 }
 .prr-shelf-action:hover { background: #F5EFE7; border-color: #C4873A; color: #C4873A; }
 .prr-shelf-action:disabled { opacity: 0.3; cursor: default; }
