@@ -1201,7 +1201,7 @@ const globalCSS = `
   line-height: 1.2;
   color: #1C1712;
 }
-.prr-hero-h1 span { color: #C4873A; }
+.prr-hero-h1 span { color: #C4873A; font-weight: 600; font-style: italic; }
 .prr-hero-meta {
   display: flex;
   gap: 20px;
@@ -1575,7 +1575,7 @@ const globalCSS = `
 .prr-book-card:hover { transform: translateY(-4px); }
 .prr-book-cover {
   width: 100%;
-  aspect-ratio: 2/3;
+  height: 160px;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -1614,12 +1614,12 @@ const globalCSS = `
 .prr-book-cover-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: top;
   border-radius: 8px;
   position: absolute;
   top: 0;
   left: 0;
-  background: #f0ebe4;
 }
 .prr-book-card-info { margin-top: 10px; }
 .prr-bci-title {
