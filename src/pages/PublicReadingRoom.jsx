@@ -467,7 +467,7 @@ export default function PublicReadingRoom() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" />
               </svg>
-              {shareCopied ? "Link copied!" : "Share shelf"}
+              {shareCopied ? "Link copied!" : "Share Reading Room"}
             </button>
             {isOwner && (
               <button className="prr-btn-share" onClick={() => setHeroEditMode(v => !v)}
@@ -830,7 +830,7 @@ export default function PublicReadingRoom() {
                                 {hasCover ? (
                                   <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img" />
                                 ) : (
-                                  <span className="prr-book-cover-title">{title}</span>
+                                  <div className="prr-book-cover-placeholder"><span className="prr-book-cover-placeholder-icon">📖</span><span className="prr-book-cover-title">{title}</span></div>
                                 )}
                               </div>
                               <div className="prr-book-card-info">
@@ -908,7 +908,7 @@ export default function PublicReadingRoom() {
                     {hasCover ? (
                       <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img" />
                     ) : (
-                      <span className="prr-book-cover-title">{title}</span>
+                      <div className="prr-book-cover-placeholder"><span className="prr-book-cover-placeholder-icon">📖</span><span className="prr-book-cover-title">{title}</span></div>
                     )}
                   </div>
                   <div className="prr-book-card-info">
@@ -1581,25 +1581,43 @@ const globalCSS = `
   aspect-ratio: 2/3;
   border-radius: 8px;
   display: flex;
-  align-items: flex-end;
-  padding: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
   position: relative;
   overflow: hidden;
   box-shadow: 3px 4px 16px rgba(0,0,0,0.12);
   background: #f0ebe4;
 }
+.prr-book-cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  height: 100%;
+}
+.prr-book-cover-placeholder-icon {
+  font-size: 1.6rem;
+  opacity: 0.4;
+}
 .prr-book-cover-title {
   font-family: 'Playfair Display', serif;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: white;
   font-weight: 600;
   line-height: 1.3;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  text-align: center;
+  max-height: 3.9em;
+  overflow: hidden;
 }
 .prr-book-cover-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 8px;
   position: absolute;
   top: 0;
