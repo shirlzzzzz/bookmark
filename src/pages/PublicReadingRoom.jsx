@@ -441,9 +441,7 @@ export default function PublicReadingRoom() {
           )}
         </div>
         <div style={{ flex: 1 }}>
-          <h1 className="prr-hero-h1">
-            {displayName}'s <span>{" "}Reading Room</span>
-          </h1>
+          <h1 className="prr-hero-h1">{displayName}'s Reading Room</h1>
           <div className="prr-hero-meta">
             <span>✦ ourbookmark.com/@{profile.username}</span>
           </div>
@@ -1199,7 +1197,6 @@ const globalCSS = `
   line-height: 1.2;
   color: #1C1712;
 }
-.prr-hero-h1 span { color: #C4873A; font-weight: 600; font-style: italic; }
 .prr-hero-meta {
   display: flex;
   gap: 20px;
