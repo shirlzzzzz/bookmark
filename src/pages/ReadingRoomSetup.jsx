@@ -18,13 +18,13 @@ export default function ReadingRoomSetup() {
   const [shelfName, setShelfName] = useState("");
   const [shelfDesc, setShelfDesc] = useState("");
   const [affiliateAmazon, setAffiliateAmazon] = useState("");
+  const [affiliateBookshop, setAffiliateBookshop] = useState("");
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [activeShelf, setActiveShelf] = useState(null); // { id, name }
   const [bookQuery, setBookQuery] = useState("");
   const [bookResults, setBookResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [searchMode, setSearchMode] = useState("title"); // "title" or "author"
   const [shelfBooksList, setShelfBooksList] = useState([]);
 
   // Load user & existing profile
@@ -49,6 +49,7 @@ export default function ReadingRoomSetup() {
         setDisplayName(p.display_name || "");
         setBio(p.bio || "");
         setAffiliateAmazon(p.affiliate_amazon || "");
+        setAffiliateBookshop(p.affiliate_bookshop || "");
 
         // Figure out which step to start on based on completeness
         if (!p.username) setStep(1);
@@ -148,59 +149,27 @@ export default function ReadingRoomSetup() {
     setSearching(true);
     try {
       const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-      const prefix = searchMode === "author" ? "inauthor" : "intitle";
-      const q = encodeURIComponent(`${prefix}:"${bookQuery.trim()}"`);
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=20&printType=books&langRestrict=en&key=${apiKey || ''}`;
-
+      const q = encodeURIComponent(bookQuery.trim());
+      const url = apiKey
+        ? `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6&key=${apiKey}`
+        : `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6`;
       const res = await fetch(url);
       const data = await res.json();
-
-      const JUNK = ["summary", "analysis", "guide", "workbook", "boxed set", "phenomenon", "biography", "study", "business", "leadership", "companion", "unofficial"];
-
-      const items = (data.items || [])
-        .filter((item) => {
-          const info = item.volumeInfo || {};
-          const title = (info.title || "").toLowerCase();
-          const subtitle = (info.subtitle || "").toLowerCase();
-          const categories = (info.categories || []).join(" ").toLowerCase();
-          const isEnglish = info.language === 'en';
-          const isJunk = JUNK.some(kw =>
-            title.includes(kw) ||
-            subtitle.includes(kw) ||
-            categories.includes("business") ||
-            categories.includes("study")
-          );
-          return isEnglish && !isJunk;
-        })
-        .map((item) => {
-          const v = item.volumeInfo;
-
-          // 1. Get best available ISBN
-          const isbn13 = v.industryIdentifiers?.find(i => i.type === "ISBN_13")?.identifier;
-          const isbn10 = v.industryIdentifiers?.find(i => i.type === "ISBN_10")?.identifier;
-          const bestIsbn = isbn13 || isbn10;
-
-          // 2. Try Google cover first
-          let finalCover = v.imageLinks?.thumbnail?.replace("http:", "https:") || null;
-
-          // 3. Fallback to Open Library if Google has no cover but we have an ISBN
-          if (!finalCover && bestIsbn) {
-            finalCover = `https://covers.openlibrary.org/b/isbn/${bestIsbn}-M.jpg?default=false`;
-          }
-
-          return {
-            google_books_id: item.id,
-            title: v.title,
-            author: (v.authors || []).join(", "),
-            cover_url: finalCover || null,
-            isbn_13: isbn13 || null,
-            isbn_10: isbn10 || null,
-          };
-        });
-
-      setBookResults(items.slice(0, 8));
+      const items = (data.items || []).map((item) => {
+        const v = item.volumeInfo || {};
+        const ids = (v.industryIdentifiers || []);
+        return {
+          google_books_id: item.id,
+          title: v.title || "Untitled",
+          author: (v.authors || []).join(", "),
+          cover_url: v.imageLinks?.thumbnail?.replace("http:", "https:").replace("zoom=1", "zoom=0") || null,
+          isbn_13: ids.find((i) => i.type === "ISBN_13")?.identifier || null,
+          isbn_10: ids.find((i) => i.type === "ISBN_10")?.identifier || null,
+        };
+      });
+      setBookResults(items);
     } catch (e) {
-      console.warn("Search error:", e);
+      console.warn("Book search error:", e);
       setBookResults([]);
     }
     setSearching(false);
@@ -272,10 +241,11 @@ export default function ReadingRoomSetup() {
   async function saveAffiliate() {
     setSaving(true);
     setError("");
-    const val = affiliateAmazon.trim() || null;
+    const amazonVal = affiliateAmazon.trim() || null;
+    const bookshopVal = affiliateBookshop.trim() || null;
     const { error: err } = await supabase
       .from("profiles")
-      .update({ affiliate_amazon: val })
+      .update({ affiliate_amazon: amazonVal, affiliate_bookshop: bookshopVal })
       .eq("id", user.id);
     if (err) setError(err.message);
     else setStep("checklist");
@@ -318,7 +288,7 @@ export default function ReadingRoomSetup() {
   const hasUsername = username && username.length >= 3;
   const hasDisplayName = displayName && displayName.trim() && displayName !== user?.email;
   const hasShelves = shelves.length > 0;
-  const hasAffiliate = !!affiliateAmazon;
+  const hasAffiliate = !!affiliateAmazon || !!affiliateBookshop;
 
   return (
     <div style={pageStyle}>
@@ -491,9 +461,11 @@ export default function ReadingRoomSetup() {
               <div className={`rrs-check-item ${hasAffiliate ? "done" : ""}`}>
                 <div className="rrs-check-icon">{hasAffiliate ? "✓" : "4"}</div>
                 <div className="rrs-check-text">
-                  <div className="rrs-check-label">Add affiliate link</div>
+                  <div className="rrs-check-label">Add affiliate links</div>
                   <div className="rrs-check-detail">
-                    {hasAffiliate ? `Amazon tag: ${affiliateAmazon}` : "Earn when visitors buy books"}
+                    {hasAffiliate 
+                      ? [affiliateAmazon && `Amazon: ${affiliateAmazon}`, affiliateBookshop && `Bookshop: ${affiliateBookshop}`].filter(Boolean).join(' · ')
+                      : "Earn when visitors buy books"}
                   </div>
                 </div>
                 <button className={hasAffiliate ? "rrs-check-edit" : "rrs-check-action"} onClick={() => setStep("affiliate")}>
@@ -563,10 +535,11 @@ export default function ReadingRoomSetup() {
         {/* ─── AFFILIATE ─── */}
         {step === "affiliate" && (
           <div className="rrs-card rrs-fade">
-            <h1 className="rrs-title">Add Affiliate Link</h1>
+            <h1 className="rrs-title">Add Affiliate Links</h1>
             <p className="rrs-desc">
-              When visitors click "Buy on Amazon" from your shelf, you'll earn a commission through the Amazon Associates program.
+              Earn a commission when visitors buy books through your links. Both are optional — add one or both.
             </p>
+
             <label className="rrs-label">Amazon Associates tag</label>
             <input
               type="text"
@@ -576,16 +549,33 @@ export default function ReadingRoomSetup() {
               className="rrs-input"
               autoFocus
             />
-            <p className="rrs-hint" style={{ marginBottom: 16 }}>
-              Don't have one? <a href="https://affiliate-program.amazon.com/" target="_blank" rel="noopener noreferrer" style={{ color: "#C4873A" }}>Sign up for Amazon Associates</a> (it's free).
+            <p className="rrs-hint">
+              Don't have one? <a href="https://affiliate-program.amazon.com/" target="_blank" rel="noopener noreferrer" style={{ color: "#C4873A" }}>Sign up for Amazon Associates</a> (free).
             </p>
+
+            <label className="rrs-label" style={{ marginTop: 16 }}>Bookshop.org affiliate ID</label>
+            <input
+              type="text"
+              value={affiliateBookshop}
+              onChange={(e) => setAffiliateBookshop(e.target.value)}
+              placeholder="your-bookshop-id"
+              className="rrs-input"
+            />
+            <p className="rrs-hint" style={{ marginBottom: 16 }}>
+              Don't have one? <a href="https://bookshop.org/affiliates" target="_blank" rel="noopener noreferrer" style={{ color: "#C4873A" }}>Join Bookshop.org affiliates</a> (free).
+            </p>
+
+            <p className="rrs-hint" style={{ marginBottom: 16, fontStyle: "italic", color: "#6B8F71" }}>
+              📖 A free "📖 Library" link is always shown on every book — no setup needed. Visitors can find your recommendations at their local library.
+            </p>
+
             {error && <p className="rrs-hint rrs-error">{error}</p>}
             <button
               className="rrs-btn-primary"
               onClick={saveAffiliate}
               disabled={saving}
             >
-              {saving ? "Saving…" : affiliateAmazon ? "Save tag" : "Skip for now"}
+              {saving ? "Saving…" : (affiliateAmazon || affiliateBookshop) ? "Save" : "Skip for now"}
             </button>
             <button className="rrs-btn-back" onClick={() => setStep("checklist")}>← Back to checklist</button>
           </div>
@@ -599,38 +589,6 @@ export default function ReadingRoomSetup() {
               Search for books to add to this shelf. You can always add more later.
             </p>
 
-            {/* Search Mode Toggle */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-              <button
-                onClick={() => setSearchMode("title")}
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '4px 12px',
-                  borderRadius: '100px',
-                  border: '1px solid #C4873A',
-                  background: searchMode === "title" ? "#C4873A" : "transparent",
-                  color: searchMode === "title" ? "white" : "#C4873A",
-                  cursor: 'pointer'
-                }}
-              >
-                Search by Title
-              </button>
-              <button
-                onClick={() => setSearchMode("author")}
-                style={{
-                  fontSize: '0.75rem',
-                  padding: '4px 12px',
-                  borderRadius: '100px',
-                  border: '1px solid #C4873A',
-                  background: searchMode === "author" ? "#C4873A" : "transparent",
-                  color: searchMode === "author" ? "white" : "#C4873A",
-                  cursor: 'pointer'
-                }}
-              >
-                Search by Author
-              </button>
-            </div>
-
             {/* Search */}
             <div className="rrs-search-row">
               <input
@@ -638,7 +596,7 @@ export default function ReadingRoomSetup() {
                 value={bookQuery}
                 onChange={(e) => setBookQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && searchBooks()}
-                placeholder={searchMode === "author" ? "e.g. J.K. Rowling" : "e.g. Harry Potter"}
+                placeholder="Search by title or author…"
                 className="rrs-input"
                 style={{ marginBottom: 0, flex: 1 }}
                 autoFocus
@@ -661,21 +619,10 @@ export default function ReadingRoomSetup() {
                   <div key={book.google_books_id || i} className="rrs-book-result">
                     <div className="rrs-book-result-cover">
                       {book.cover_url ? (
-                        <img
-                          src={book.cover_url}
-                          alt=""
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            e.target.nextSibling.style.display = "flex";
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        className="rrs-book-result-placeholder"
-                        style={{ display: book.cover_url ? "none" : "flex", flexDirection: "column", alignItems: "center", gap: 2 }}
-                      >
-                        <span style={{ fontSize: "1.4rem" }}>📚</span>
-                      </div>
+                        <img src={book.cover_url} alt="" />
+                      ) : (
+                        <div className="rrs-book-result-placeholder">📖</div>
+                      )}
                     </div>
                     <div className="rrs-book-result-info">
                       <div className="rrs-book-result-title">{book.title}</div>

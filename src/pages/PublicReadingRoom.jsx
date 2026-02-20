@@ -10,6 +10,18 @@ function amazonLink(book, profile) {
   return `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${encodeURIComponent(tag)}`;
 }
 
+function bookshopLink(book, profile) {
+  const tag = profile?.affiliate_bookshop || "";
+  const q = book?.title || "";
+  const base = `https://bookshop.org/search?keywords=${encodeURIComponent(q)}`;
+  return tag ? `${base}&a_aid=${encodeURIComponent(tag)}` : base;
+}
+
+function libbyLink(book) {
+  const q = book?.title || "";
+  return `https://www.overdrive.com/search?q=${encodeURIComponent(q)}`;
+}
+
 const SPINE_COLORS = [
   ["#C4873A", "#E8A85C"], ["#6B8F71", "#92B89A"], ["#D4826A", "#E8A090"],
   ["#8B6BAE", "#A98CC8"], ["#4A7FA5", "#6EA4C8"], ["#5C7A5C", "#7A9E7A"],
@@ -68,6 +80,7 @@ export default function PublicReadingRoom() {
   // Bio editing (via Edit profile panel)
   const [bioValue, setBioValue] = useState("");
   const [affiliateValue, setAffiliateValue] = useState("");
+  const [affiliateBookshopValue, setAffiliateBookshopValue] = useState("");
 
   // Hero customization
   const [heroEditMode, setHeroEditMode] = useState(false);
@@ -231,8 +244,9 @@ export default function PublicReadingRoom() {
       bio: trimmed,
       header_widgets: headerConfig,
       affiliate_amazon: affiliateValue.trim() || null,
+      affiliate_bookshop: affiliateBookshopValue.trim() || null,
     }).eq("id", profile.id);
-    setProfile({ ...profile, bio: trimmed, affiliate_amazon: affiliateValue.trim() || null });
+    setProfile({ ...profile, bio: trimmed, affiliate_amazon: affiliateValue.trim() || null, affiliate_bookshop: affiliateBookshopValue.trim() || null });
     setSavingHeader(false);
     setHeroEditMode(false);
   }
@@ -268,7 +282,7 @@ export default function PublicReadingRoom() {
 
       const { data: p } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, room_is_public, affiliate_amazon, avatar_url, header_widgets")
+        .select("id, username, display_name, bio, room_is_public, affiliate_amazon, affiliate_bookshop, avatar_url, header_widgets")
         .eq("username", username)
         .eq("room_is_public", true)
         .single();
@@ -284,6 +298,7 @@ export default function PublicReadingRoom() {
       setProfile(p);
       setBioValue(p.bio || "");
       setAffiliateValue(p.affiliate_amazon || "");
+      setAffiliateBookshopValue(p.affiliate_bookshop || "");
       if (p.header_widgets) {
         setHeaderConfig((prev) => ({ ...prev, ...p.header_widgets }));
       }
@@ -503,11 +518,27 @@ export default function PublicReadingRoom() {
                 style={{ maxWidth: 280 }} />
             </div>
 
+            {/* BOOKSHOP.ORG AFFILIATE */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#4A4035", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>Bookshop.org Affiliate ID</label>
+              <p style={{ fontSize: "0.78rem", color: "#8C7F72", marginBottom: 8 }}>Your Bookshop.org affiliate ID. Don't have one? <a href="https://bookshop.org/affiliates" target="_blank" rel="noopener noreferrer" style={{ color: "#C4873A" }}>Join here</a> (free).</p>
+              <input className="prr-inline-input" placeholder="e.g. your-bookshop-id"
+                value={affiliateBookshopValue}
+                onChange={(e) => setAffiliateBookshopValue(e.target.value)}
+                style={{ maxWidth: 280 }} />
+            </div>
+
+            {/* LIBRARY NOTE */}
+            <div style={{ marginBottom: 20, padding: "12px 16px", background: "rgba(91,126,145,0.08)", borderRadius: 12 }}>
+              <p style={{ fontSize: "0.82rem", color: "#5B7E91", fontWeight: 500, marginBottom: 2 }}>📖 Library (Free)</p>
+              <p style={{ fontSize: "0.78rem", color: "#8C7F72" }}>A "📖 Library" link is automatically shown on every book — no setup needed. Visitors can search for your recommendations at their local library through OverDrive.</p>
+            </div>
+
             <div style={{ display: "flex", gap: 10 }}>
               <button className="prr-inline-search-btn" onClick={saveProfileEdit} disabled={savingHeader}>
                 {savingHeader ? "Saving…" : "Save changes"}
               </button>
-              <button className="prr-inline-cancel-text" onClick={() => { setHeroEditMode(false); setBioValue(profile.bio || ""); }}>Cancel</button>
+              <button className="prr-inline-cancel-text" onClick={() => { setHeroEditMode(false); setBioValue(profile.bio || ""); setAffiliateValue(profile.affiliate_amazon || ""); setAffiliateBookshopValue(profile.affiliate_bookshop || ""); }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -716,13 +747,7 @@ export default function PublicReadingRoom() {
                             {isOwner && (
                               <button className="prr-book-remove" onClick={() => removeBookFromShelf(sb.id)} title="Remove from shelf">✕</button>
                             )}
-                            <a
-                              href={amazonLink(book, profile)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="prr-book-card"
-                              style={{ textDecoration: "none" }}
-                            >
+                            <div className="prr-book-card">
                               <div
                                 className="prr-book-cover"
                                 style={hasCover ? {} : { background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}
@@ -740,7 +765,8 @@ export default function PublicReadingRoom() {
                                   <div className="prr-bci-note">"{sb.curator_note}"</div>
                                 )}
                               </div>
-                            </a>
+                              <StoreLinks book={book} profile={profile} />
+                            </div>
                           </div>
                         );
                       })}
@@ -796,13 +822,9 @@ export default function PublicReadingRoom() {
               const [c1, c2] = hashColor(title);
               const hasCover = !!book?.cover_url;
               return (
-                <a
+                <div
                   key={sb.id}
-                  href={amazonLink(book, profile)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="prr-book-card"
-                  style={{ textDecoration: "none" }}
                 >
                   <div
                     className="prr-book-cover"
@@ -818,7 +840,8 @@ export default function PublicReadingRoom() {
                     <div className="prr-bci-title">{title}</div>
                     {book?.author && <div className="prr-bci-author">{book.author}</div>}
                   </div>
-                </a>
+                  <StoreLinks book={book} profile={profile} />
+                </div>
               );
             })}
             {allBooks.length === 0 && (
@@ -980,6 +1003,17 @@ function SignupModal({ onClose }) {
 }
 
 /* ─── NAV COMPONENT ─── */
+/* ─── STORE LINKS (clean pills) ─── */
+function StoreLinks({ book, profile }) {
+  return (
+    <div className="prr-store-links">
+      <a href={amazonLink(book, profile)} target="_blank" rel="noopener noreferrer" className="prr-store-btn prr-store-amazon" title="Buy on Amazon">Amazon</a>
+      <a href={bookshopLink(book, profile)} target="_blank" rel="noopener noreferrer" className="prr-store-btn prr-store-bookshop" title="Buy on Bookshop.org">Bookshop</a>
+      <a href={libbyLink(book)} target="_blank" rel="noopener noreferrer" className="prr-store-btn prr-store-libby" title="Borrow free from your library">📖 Library</a>
+    </div>
+  );
+}
+
 function Nav({ onSignup, isOwner }) {
   return (
     <nav className="prr-nav">
@@ -1503,6 +1537,55 @@ const globalCSS = `
   font-style: italic;
   margin-top: 4px;
   line-height: 1.4;
+}
+
+/* ── STORE LINKS ── */
+.prr-store-links {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.prr-store-btn {
+  padding: 4px 8px;
+  border-radius: 100px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s;
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.prr-store-amazon {
+  background: #F5EFE7;
+  color: #C4873A;
+  border: 1px solid rgba(196,135,58,0.2);
+}
+.prr-store-amazon:hover {
+  background: #C4873A;
+  color: white;
+  border-color: #C4873A;
+}
+.prr-store-bookshop {
+  background: #EEF2EE;
+  color: #5C7A5C;
+  border: 1px solid rgba(92,122,92,0.2);
+}
+.prr-store-bookshop:hover {
+  background: #5C7A5C;
+  color: white;
+  border-color: #5C7A5C;
+}
+.prr-store-libby {
+  background: #EDF1F4;
+  color: #5B7E91;
+  border: 1px solid rgba(91,126,145,0.2);
+}
+.prr-store-libby:hover {
+  background: #5B7E91;
+  color: white;
+  border-color: #5B7E91;
 }
 
 /* ── FOOTER ── */
