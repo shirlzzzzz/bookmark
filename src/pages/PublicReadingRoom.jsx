@@ -379,7 +379,7 @@ export default function PublicReadingRoom() {
   /* ─── LOADING / NOT FOUND ─── */
   if (loading) {
     return (
-      <div style={styles.page}>
+      <div style={styles.page} className="prr-page-wrap">
         <style>{globalCSS}</style>
         <Nav onSignup={() => setShowSignup(true)} />
         <div style={{ padding: "80px 40px", textAlign: "center", color: "#8C7F72" }}>
@@ -391,7 +391,7 @@ export default function PublicReadingRoom() {
 
   if (!profile) {
     return (
-      <div style={styles.page}>
+      <div style={styles.page} className="prr-page-wrap">
         <style>{globalCSS}</style>
         <Nav onSignup={() => setShowSignup(true)} />
         <div style={{ padding: "80px 40px", textAlign: "center" }}>
@@ -411,7 +411,7 @@ export default function PublicReadingRoom() {
 
   /* ─── MAIN RENDER ─── */
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="prr-page-wrap">
       <style>{globalCSS}</style>
       <Nav onSignup={() => setShowSignup(true)} isOwner={isOwner} />
 
@@ -1111,7 +1111,16 @@ const styles = {
 
 /* ─── SCOPED CSS ─── */
 const globalCSS = `
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── GLOBAL FONT RESET ── */
+.prr-page-wrap, .prr-page-wrap * {
+  font-family: 'DM Sans', sans-serif;
+  box-sizing: border-box;
+}
+.prr-page-wrap button, .prr-page-wrap input, .prr-page-wrap textarea, .prr-page-wrap select {
+  font-family: 'DM Sans', sans-serif;
+}
 
 /* ── GRAIN OVERLAY ── */
 .prr-nav ~ *::selection { background: rgba(196,135,58,0.25); }
