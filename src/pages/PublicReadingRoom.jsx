@@ -62,6 +62,22 @@ export default function PublicReadingRoom() {
   const [savingShelf, setSavingShelf] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [editError, setEditError] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+
+  // Bio editing (via Edit profile panel)
+  const [bioValue, setBioValue] = useState("");
+
+  // Hero customization
+  const [heroEditMode, setHeroEditMode] = useState(false);
+  const [headerConfig, setHeaderConfig] = useState({
+    stats: { enabled: true },
+    currentlyReading: { enabled: false, title: "", author: "", cover_url: "" },
+    genreAgeGroup: { enabled: false, value: "" },
+    socialLinks: { enabled: false, links: [{ platform: "", url: "" }] },
+  });
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [statsEditMode, setStatsEditMode] = useState(false);
 
   // Check if current user owns this page
   useEffect(() => {
@@ -173,19 +189,57 @@ export default function PublicReadingRoom() {
   async function handleAvatarUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const ext = file.name.split(".").pop();
-    const path = `avatars/${profile.id}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (upErr) { console.warn("Avatar upload error:", upErr); return; }
-    const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", profile.id);
-    setProfile({ ...profile, avatar_url: publicUrl });
+    setAvatarUploading(true);
+    setAvatarError("");
+    try {
+      // Always use a consistent extension-free path so upsert works reliably,
+      // then bust the browser cache with a timestamp query param.
+      const ext = file.name.split(".").pop().toLowerCase();
+      const path = `avatars/${profile.id}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      // Append cache-buster so the browser fetches the new image immediately
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+      const { error: dbErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: cacheBustedUrl })
+        .eq("id", profile.id);
+      if (dbErr) throw dbErr;
+      setProfile({ ...profile, avatar_url: cacheBustedUrl });
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      setAvatarError(err.message || "Upload failed. Please try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   function handleShare() {
     navigator.clipboard?.writeText(`https://ourbookmark.com/@${profile.username}`);
     setShareCopied(true);
     setTimeout(() => setShareCopied(false), 2000);
+  }
+
+  async function saveProfileEdit() {
+    setSavingHeader(true);
+    const trimmed = bioValue.trim();
+    await supabase.from("profiles").update({
+      bio: trimmed,
+      header_widgets: headerConfig,
+    }).eq("id", profile.id);
+    setProfile({ ...profile, bio: trimmed });
+    setSavingHeader(false);
+    setHeroEditMode(false);
+  }
+
+  async function saveStatsConfig() {
+    setSavingHeader(true);
+    await supabase.from("profiles").update({ header_widgets: headerConfig }).eq("id", profile.id);
+    setSavingHeader(false);
+    setStatsEditMode(false);
   }
 
   const booksByShelf = useMemo(() => {
@@ -212,7 +266,7 @@ export default function PublicReadingRoom() {
 
       const { data: p } = await supabase
         .from("profiles")
-        .select("id, username, display_name, bio, room_is_public, affiliate_amazon, avatar_url")
+        .select("id, username, display_name, bio, room_is_public, affiliate_amazon, avatar_url, header_widgets")
         .eq("username", username)
         .eq("room_is_public", true)
         .single();
@@ -226,6 +280,10 @@ export default function PublicReadingRoom() {
         return;
       }
       setProfile(p);
+      setBioValue(p.bio || "");
+      if (p.header_widgets) {
+        setHeaderConfig((prev) => ({ ...prev, ...p.header_widgets }));
+      }
 
       const { data: s } = await supabase
         .from("shelves")
@@ -294,6 +352,10 @@ export default function PublicReadingRoom() {
     );
   }
 
+  const widgetRowStyle = { borderBottom: "1px solid rgba(0,0,0,0.06)", paddingBottom: 16, marginBottom: 16 };
+  const widgetLabelStyle = { display: "flex", alignItems: "center", cursor: "pointer", fontSize: "0.9rem", color: "#1C1712", userSelect: "none" };
+
+  /* ─── MAIN RENDER ─── */
   return (
     <div style={styles.page}>
       <style>{globalCSS}</style>
@@ -303,18 +365,28 @@ export default function PublicReadingRoom() {
       <div className="prr-hero">
         <div className="prr-avatar-wrap">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="prr-avatar-img" />
+            <img src={profile.avatar_url} alt="" className="prr-avatar-img"
+              style={avatarUploading ? { opacity: 0.5 } : {}} />
           ) : (
-            <div className="prr-avatar">{initial}</div>
+            <div className="prr-avatar" style={avatarUploading ? { opacity: 0.5 } : {}}>{initial}</div>
           )}
           {isOwner && (
-            <label className="prr-avatar-edit">
-              📷
-              <input type="file" accept="image/*" onChange={handleAvatarUpload} style={{ display: "none" }} />
+            <label className="prr-avatar-edit" title="Change photo">
+              {avatarUploading ? "⏳" : "📷"}
+              <input type="file" accept="image/*" onChange={handleAvatarUpload}
+                style={{ display: "none" }} disabled={avatarUploading} />
             </label>
           )}
+          {avatarError && (
+            <div style={{ position: "absolute", top: "100%", left: 0, marginTop: 6,
+              background: "#fff0f0", border: "1px solid #f5c6cb", borderRadius: 8,
+              padding: "6px 10px", fontSize: "0.75rem", color: "#c0392b",
+              whiteSpace: "nowrap", zIndex: 10 }}>
+              {avatarError}
+            </div>
+          )}
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1 className="prr-hero-h1">
             {displayName}'s <span>{" "}Reading Room</span>
           </h1>
@@ -322,6 +394,20 @@ export default function PublicReadingRoom() {
             <span>✦ ourbookmark.com/@{profile.username}</span>
           </div>
           {profile.bio && <p className="prr-hero-bio">{profile.bio}</p>}
+
+          {/* Social links display */}
+          {headerConfig.socialLinks?.links?.some(l => l.url) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+              {headerConfig.socialLinks.links.filter(l => l.url).map((link, i) => (
+                <a key={i} href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ background: "#FDF0E0", border: "1px solid rgba(196,135,58,0.2)", borderRadius: 100, padding: "5px 14px", fontSize: "0.8rem", color: "#C4873A", textDecoration: "none", fontWeight: 500 }}>
+                  {link.platform || "🔗 Link"}
+                </a>
+              ))}
+            </div>
+          )}
+
           <div className="prr-profile-actions">
             <button className="prr-btn-share" onClick={handleShare}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -329,9 +415,90 @@ export default function PublicReadingRoom() {
               </svg>
               {shareCopied ? "Link copied!" : "Share shelf"}
             </button>
+            {isOwner && (
+              <button className="prr-btn-share" onClick={() => setHeroEditMode(v => !v)}
+                style={heroEditMode ? { borderColor: "#C4873A", color: "#C4873A" } : {}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                {heroEditMode ? "Done editing" : "Edit profile"}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {/* PROFILE EDIT PANEL */}
+      {isOwner && heroEditMode && (
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 40px 32px" }}>
+          <div style={{ background: "white", border: "1.5px solid rgba(196,135,58,0.25)", borderRadius: 16, padding: 24, boxShadow: "0 4px 24px rgba(0,0,0,0.06)" }}>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1rem", marginBottom: 20, color: "#1C1712" }}>Edit Profile</h3>
+
+            {/* BIO */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#4A4035", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Bio</label>
+              <textarea
+                value={bioValue}
+                onChange={(e) => setBioValue(e.target.value)}
+                placeholder="Write a short bio…"
+                style={{
+                  width: "100%", padding: "10px 14px",
+                  border: "1.5px solid rgba(0,0,0,0.12)", borderRadius: 12,
+                  fontFamily: "'DM Sans', sans-serif", fontSize: "0.95rem",
+                  lineHeight: 1.6, color: "#1C1712", background: "#FAF7F2",
+                  outline: "none", resize: "vertical", boxSizing: "border-box",
+                  minHeight: 80, transition: "border-color 0.2s",
+                }}
+                onFocus={e => e.target.style.borderColor = "#C4873A"}
+                onBlur={e => e.target.style.borderColor = "rgba(0,0,0,0.12)"}
+                rows={3}
+              />
+            </div>
+
+            {/* SOCIAL LINKS */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#4A4035", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Social Links</label>
+              {(headerConfig.socialLinks?.links || [{ platform: "", url: "" }]).map((link, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                  <input className="prr-inline-input" placeholder="Label (e.g. Instagram)" value={link.platform}
+                    onChange={(e) => {
+                      const links = [...(headerConfig.socialLinks?.links || [])];
+                      links[i] = { ...links[i], platform: e.target.value };
+                      setHeaderConfig(c => ({ ...c, socialLinks: { ...c.socialLinks, links } }));
+                    }}
+                    style={{ flex: "1 1 140px" }} />
+                  <input className="prr-inline-input" placeholder="URL (e.g. instagram.com/yourname)" value={link.url}
+                    onChange={(e) => {
+                      const links = [...(headerConfig.socialLinks?.links || [])];
+                      links[i] = { ...links[i], url: e.target.value };
+                      setHeaderConfig(c => ({ ...c, socialLinks: { ...c.socialLinks, links } }));
+                    }}
+                    style={{ flex: "2 1 220px" }} />
+                  {(headerConfig.socialLinks?.links?.length || 0) > 1 && (
+                    <button className="prr-inline-cancel" onClick={() => {
+                      const links = (headerConfig.socialLinks?.links || []).filter((_, idx) => idx !== i);
+                      setHeaderConfig(c => ({ ...c, socialLinks: { ...c.socialLinks, links } }));
+                    }}>✕</button>
+                  )}
+                </div>
+              ))}
+              {(headerConfig.socialLinks?.links?.length || 0) < 4 && (
+                <button className="prr-inline-add-link" style={{ marginTop: 4 }} onClick={() =>
+                  setHeaderConfig(c => ({ ...c, socialLinks: { ...c.socialLinks, links: [...(c.socialLinks?.links || []), { platform: "", url: "" }] } }))
+                }>+ Add another link</button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="prr-inline-search-btn" onClick={saveProfileEdit} disabled={savingHeader}>
+                {savingHeader ? "Saving…" : "Save changes"}
+              </button>
+              <button className="prr-inline-cancel-text" onClick={() => { setHeroEditMode(false); setBioValue(profile.bio || ""); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SHELF TABS */}
       <div className="prr-shelf-nav">
@@ -351,7 +518,7 @@ export default function PublicReadingRoom() {
 
       {/* MAIN */}
       <div className="prr-main">
-        {/* STATS */}
+        {/* STATS BAR */}
         <div className="prr-stats-bar">
           <div className="prr-stat">
             <div className="prr-stat-num">{totalBooks}</div>
@@ -361,7 +528,97 @@ export default function PublicReadingRoom() {
             <div className="prr-stat-num">{totalShelves}</div>
             <div className="prr-stat-label">shelves</div>
           </div>
+
+          {/* Currently reading tile */}
+          {headerConfig.currentlyReading?.enabled && headerConfig.currentlyReading?.title && (
+            <div className="prr-stat" style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 10, borderLeft: "1px solid rgba(196,135,58,0.2)", paddingLeft: 20 }}>
+              {headerConfig.currentlyReading.cover_url && (
+                <img src={headerConfig.currentlyReading.cover_url} alt="" style={{ width: 28, height: 40, objectFit: "cover", borderRadius: 3, flexShrink: 0 }} />
+              )}
+              <div>
+                <div className="prr-stat-label" style={{ marginBottom: 2 }}>📖 reading now</div>
+                <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#1C1712", lineHeight: 1.2 }}>{headerConfig.currentlyReading.title}</div>
+                {headerConfig.currentlyReading.author && <div style={{ fontSize: "0.72rem", color: "#8C7F72", marginTop: 1 }}>{headerConfig.currentlyReading.author}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Genre / age group tile */}
+          {headerConfig.genreAgeGroup?.enabled && headerConfig.genreAgeGroup?.value && (
+            <div className="prr-stat" style={{ borderLeft: "1px solid rgba(196,135,58,0.2)", paddingLeft: 20 }}>
+              <div className="prr-stat-label" style={{ marginBottom: 2 }}>📚 reads</div>
+              <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.85rem", fontWeight: 500, color: "#1C1712" }}>{headerConfig.genreAgeGroup.value}</div>
+            </div>
+          )}
+
+          {/* Owner: customize link */}
+          {isOwner && !statsEditMode && (
+            <button onClick={() => setStatsEditMode(true)}
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#C4873A", fontSize: "0.78rem", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", padding: "4px 8px", borderRadius: 8, transition: "background 0.15s", flexShrink: 0 }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(196,135,58,0.08)"}
+              onMouseLeave={e => e.currentTarget.style.background = "none"}>
+              + Customize
+            </button>
+          )}
+          {isOwner && statsEditMode && (
+            <button onClick={() => setStatsEditMode(false)}
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#8C7F72", fontSize: "0.78rem", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", padding: "4px 8px", flexShrink: 0 }}>
+              Done
+            </button>
+          )}
         </div>
+
+        {/* STATS BAR CUSTOMIZE PANEL */}
+        {isOwner && statsEditMode && (
+          <div style={{ background: "white", border: "1.5px solid rgba(196,135,58,0.2)", borderRadius: 12, padding: "16px 20px", marginBottom: 28, marginTop: -12 }}>
+            <p style={{ fontSize: "0.8rem", color: "#8C7F72", marginBottom: 14 }}>Choose what to show in your stats bar:</p>
+
+            {/* Currently reading */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.88rem", fontWeight: 500, color: "#1C1712", cursor: "pointer", marginBottom: 8 }}>
+                <input type="checkbox" checked={headerConfig.currentlyReading?.enabled ?? false}
+                  onChange={(e) => setHeaderConfig(c => ({ ...c, currentlyReading: { ...c.currentlyReading, enabled: e.target.checked } }))}
+                  style={{ accentColor: "#C4873A" }} />
+                📖 Currently reading
+              </label>
+              {headerConfig.currentlyReading?.enabled && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingLeft: 22 }}>
+                  <input className="prr-inline-input" placeholder="Book title" value={headerConfig.currentlyReading?.title || ""}
+                    onChange={(e) => setHeaderConfig(c => ({ ...c, currentlyReading: { ...c.currentlyReading, title: e.target.value } }))}
+                    style={{ flex: "1 1 160px" }} />
+                  <input className="prr-inline-input" placeholder="Author (optional)" value={headerConfig.currentlyReading?.author || ""}
+                    onChange={(e) => setHeaderConfig(c => ({ ...c, currentlyReading: { ...c.currentlyReading, author: e.target.value } }))}
+                    style={{ flex: "1 1 160px" }} />
+                  <input className="prr-inline-input" placeholder="Cover image URL (optional)" value={headerConfig.currentlyReading?.cover_url || ""}
+                    onChange={(e) => setHeaderConfig(c => ({ ...c, currentlyReading: { ...c.currentlyReading, cover_url: e.target.value } }))}
+                    style={{ flex: "2 1 220px" }} />
+                </div>
+              )}
+            </div>
+
+            {/* Genre / age group */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.88rem", fontWeight: 500, color: "#1C1712", cursor: "pointer", marginBottom: 8 }}>
+                <input type="checkbox" checked={headerConfig.genreAgeGroup?.enabled ?? false}
+                  onChange={(e) => setHeaderConfig(c => ({ ...c, genreAgeGroup: { ...c.genreAgeGroup, enabled: e.target.checked } }))}
+                  style={{ accentColor: "#C4873A" }} />
+                📚 Favorite genre / age group
+              </label>
+              {headerConfig.genreAgeGroup?.enabled && (
+                <input className="prr-inline-input" placeholder="e.g. Picture books for ages 2–6" value={headerConfig.genreAgeGroup?.value || ""}
+                  onChange={(e) => setHeaderConfig(c => ({ ...c, genreAgeGroup: { ...c.genreAgeGroup, value: e.target.value } }))}
+                  style={{ marginLeft: 22, width: "calc(100% - 22px)", maxWidth: 380 }} />
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="prr-inline-search-btn" onClick={saveStatsConfig} disabled={savingHeader}>
+                {savingHeader ? "Saving…" : "Save"}
+              </button>
+              <button className="prr-inline-cancel-text" onClick={() => setStatsEditMode(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
 
         {/* TAB: SHELVES */}
         {activeTab === "shelves" && (
