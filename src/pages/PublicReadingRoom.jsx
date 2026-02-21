@@ -143,31 +143,33 @@ export default function PublicReadingRoom() {
 
     // 1) Try ISBNdb first (primary search via Vite proxy)
     const looksLikeIsbn = /^[\d\-\s]{10,17}$/.test(q);
+    const words = q.split(/\s+/);
+    const looksLikeAuthor = !looksLikeIsbn && words.length >= 2 && words.length <= 3
+      && words.every(w => /^[a-zA-Z'.()-]+$/.test(w));
     let isbnBooks = null;
+    const lang = '&language=en';
 
-    // Try author endpoint first for non-ISBN queries
-    if (!looksLikeIsbn) {
+    // Try books endpoint first (works for titles, series, and general queries)
+    try {
+      const res = await fetch(`/api/isbndb/books/${encodeURIComponent(q)}?pageSize=6${lang}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.books?.length) isbnBooks = data.books;
+      }
+    } catch (e) {
+      console.warn("ISBNdb books search failed:", e);
+    }
+
+    // If books returned nothing and query looks like an author name, try author endpoint
+    if (!isbnBooks && looksLikeAuthor) {
       try {
-        const res = await fetch(`/api/isbndb/author/${encodeURIComponent(q)}?pageSize=6`);
+        const res = await fetch(`/api/isbndb/author/${encodeURIComponent(q)}?pageSize=6${lang}`);
         if (res.ok) {
           const data = await res.json();
           if (data?.books?.length) isbnBooks = data.books;
         }
       } catch (e) {
         console.warn("ISBNdb author search failed:", e);
-      }
-    }
-
-    // Fall through to books endpoint for ISBNs, titles, or if author returned nothing
-    if (!isbnBooks) {
-      try {
-        const res = await fetch(`/api/isbndb/books/${encodeURIComponent(q)}?pageSize=6`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.books?.length) isbnBooks = data.books;
-        }
-      } catch (e) {
-        console.warn("ISBNdb books search failed:", e);
       }
     }
 
