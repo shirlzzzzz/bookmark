@@ -141,17 +141,16 @@ export default function PublicReadingRoom() {
     setSearching(true);
     const q = bookQuery.trim();
 
-    // 1) Try ISBNdb first (primary search via Vite proxy)
+    // 1) Try ISBNdb first (primary search via serverless function)
     const looksLikeIsbn = /^[\d\-\s]{10,17}$/.test(q);
     const words = q.split(/\s+/);
     const looksLikeAuthor = !looksLikeIsbn && words.length >= 2 && words.length <= 3
       && words.every(w => /^[a-zA-Z'.()-]+$/.test(w));
     let isbnBooks = null;
-    const lang = '&language=en';
 
     // Try books endpoint first (works for titles, series, and general queries)
     try {
-      const res = await fetch(`/api/isbndb/books/${encodeURIComponent(q)}?pageSize=6${lang}`);
+      const res = await fetch(`/api/isbndb?endpoint=${encodeURIComponent('/books/' + q)}&pageSize=6&language=en`);
       if (res.ok) {
         const data = await res.json();
         if (data?.books?.length) isbnBooks = data.books;
@@ -163,7 +162,7 @@ export default function PublicReadingRoom() {
     // If books returned nothing and query looks like an author name, try author endpoint
     if (!isbnBooks && looksLikeAuthor) {
       try {
-        const res = await fetch(`/api/isbndb/author/${encodeURIComponent(q)}?pageSize=6${lang}`);
+        const res = await fetch(`/api/isbndb?endpoint=${encodeURIComponent('/author/' + q)}&pageSize=6&language=en`);
         if (res.ok) {
           const data = await res.json();
           if (data?.books?.length) isbnBooks = data.books;

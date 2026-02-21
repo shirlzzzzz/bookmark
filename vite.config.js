@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const key = env.ISBNDB_API_KEY;
-  console.log("ISBNdb key loaded:", key ? "yes" : "NO");
 
   return {
     plugins: [react()],
@@ -14,11 +13,20 @@ export default defineConfig(({ mode }) => {
           target: "https://api2.isbndb.com",
           changeOrigin: true,
           secure: true,
-          rewrite: (path) => path.replace(/^\/api\/isbndb/, ""),
+          rewrite: (path) => {
+            try {
+              const url = new URL(path, "http://localhost");
+              const endpoint = url.searchParams.get("endpoint") || "";
+              url.searchParams.delete("endpoint");
+              const remaining = url.searchParams.toString();
+              return endpoint + (remaining ? "?" + remaining : "");
+            } catch {
+              return path.replace(/^\/api\/isbndb/, "");
+            }
+          },
           configure: (proxy) => {
-            proxy.on("proxyReq", (proxyReq, req) => {
+            proxy.on("proxyReq", (proxyReq) => {
               proxyReq.setHeader("Authorization", key);
-              console.log("Proxying:", req.url, "-> auth key present:", !!key);
             });
           },
         },

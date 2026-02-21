@@ -56,17 +56,15 @@ const searchISBNdb = async (query, maxResults = 8) => {
   if (!q) return null;
 
   const looksLikeIsbn = /^[\d\-\s]{10,17}$/.test(q);
-  // Heuristic: likely an author if 2-3 short words, all letters (e.g. "Eric Carle", "Mo Willems")
   const words = q.split(/\s+/);
   const looksLikeAuthor = !looksLikeIsbn && words.length >= 2 && words.length <= 3
     && words.every(w => /^[a-zA-Z'.()-]+$/.test(w));
 
   let books = null;
-  const lang = '&language=en';
 
   // Try books endpoint first (works for titles, series, and general queries)
   try {
-    const res = await fetch(`/api/isbndb/books/${encodeURIComponent(q)}?pageSize=${maxResults}${lang}`);
+    const res = await fetch(`/api/isbndb?endpoint=${encodeURIComponent('/books/' + q)}&pageSize=${maxResults}&language=en`);
     if (res.ok) {
       const data = await res.json();
       if (data.books?.length) books = data.books;
@@ -78,7 +76,7 @@ const searchISBNdb = async (query, maxResults = 8) => {
   // If books returned nothing and query looks like an author name, try author endpoint
   if (!books && looksLikeAuthor) {
     try {
-      const res = await fetch(`/api/isbndb/author/${encodeURIComponent(q)}?pageSize=${maxResults}${lang}`);
+      const res = await fetch(`/api/isbndb?endpoint=${encodeURIComponent('/author/' + q)}&pageSize=${maxResults}&language=en`);
       if (res.ok) {
         const data = await res.json();
         if (data.books?.length) books = data.books;
@@ -159,7 +157,7 @@ const fetchBookCover = async (bookTitle) => {
     // 1) Try ISBNdb first (better coverage)
     try {
       const isbnRes = await fetch(
-        `/api/isbndb/books/${encodeURIComponent(cleanTitle)}?pageSize=1&language=en`
+        `/api/isbndb?endpoint=${encodeURIComponent('/books/' + cleanTitle)}&pageSize=1&language=en`
       );
       if (isbnRes.ok) {
         const isbnData = await isbnRes.json();
