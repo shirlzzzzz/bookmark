@@ -6,13 +6,17 @@ const FALLBACK_AMAZON_TAG = "YOURTAG-20";
 
 function amazonLink(book, profile) {
   const tag = profile?.affiliate_amazon || FALLBACK_AMAZON_TAG;
-  const q = book?.isbn_13 || book?.isbn_10 || book?.title || "";
-  return `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${encodeURIComponent(tag)}`;
+  const isbn = book?.isbn_13 || book?.isbn_10;
+  const title = book?.title || "";
+  // Direct product page link converts better than search
+  if (isbn) return `https://www.amazon.com/dp/${isbn}/?tag=${encodeURIComponent(tag)}`;
+  return `https://www.amazon.com/s?k=${encodeURIComponent(title)}&tag=${encodeURIComponent(tag)}`;
 }
 
 function bookshopLink(book, profile) {
   const tag = profile?.affiliate_bookshop || "";
-  const q = book?.title || "";
+  const isbn = book?.isbn_13 || book?.isbn_10;
+  const q = isbn || book?.title || "";
   const base = `https://bookshop.org/search?keywords=${encodeURIComponent(q)}`;
   return tag ? `${base}&a_aid=${encodeURIComponent(tag)}` : base;
 }
@@ -135,24 +139,83 @@ export default function PublicReadingRoom() {
   async function searchBooks() {
     if (!bookQuery.trim()) return;
     setSearching(true);
+    const q = bookQuery.trim();
+
+    // 1) Try ISBNdb first (primary search via Vite proxy)
+    const looksLikeIsbn = /^[\d\-\s]{10,17}$/.test(q);
+    let isbnBooks = null;
+
+    // Try author endpoint first for non-ISBN queries
+    if (!looksLikeIsbn) {
+      try {
+        const res = await fetch(`/api/isbndb/author/${encodeURIComponent(q)}?pageSize=6`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.books?.length) isbnBooks = data.books;
+        }
+      } catch (e) {
+        console.warn("ISBNdb author search failed:", e);
+      }
+    }
+
+    // Fall through to books endpoint for ISBNs, titles, or if author returned nothing
+    if (!isbnBooks) {
+      try {
+        const res = await fetch(`/api/isbndb/books/${encodeURIComponent(q)}?pageSize=6`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.books?.length) isbnBooks = data.books;
+        }
+      } catch (e) {
+        console.warn("ISBNdb books search failed:", e);
+      }
+    }
+
+    if (isbnBooks?.length) {
+      setBookResults(isbnBooks.map((b) => {
+        const img = b.image && !b.image.includes('image_not_available') ? b.image : null;
+        const cover = img
+          || (b.isbn13 ? `https://covers.openlibrary.org/b/isbn/${b.isbn13}-M.jpg` : null)
+          || (b.isbn ? `https://covers.openlibrary.org/b/isbn/${b.isbn}-M.jpg` : null);
+        return {
+          google_books_id: null,
+          title: b.title || "Untitled",
+          author: (b.authors || []).join(", "),
+          cover_url: cover,
+          isbn_13: b.isbn13 || null,
+          isbn_10: b.isbn || null,
+        };
+      }));
+      setSearching(false);
+      return;
+    }
+
+    // 2) Fallback: Google Books with Open Library cover fallback
     try {
       const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-      const q = encodeURIComponent(bookQuery.trim());
+      const qEnc = encodeURIComponent(q);
       const url = apiKey
-        ? `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6&key=${apiKey}`
-        : `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=6`;
+        ? `https://www.googleapis.com/books/v1/volumes?q=${qEnc}&maxResults=6&key=${apiKey}`
+        : `https://www.googleapis.com/books/v1/volumes?q=${qEnc}&maxResults=6`;
       const res = await fetch(url);
       const data = await res.json();
       setBookResults((data.items || []).map((item) => {
         const v = item.volumeInfo || {};
         const ids = (v.industryIdentifiers || []);
+        const isbn13 = ids.find((i) => i.type === "ISBN_13")?.identifier || null;
+        const isbn10 = ids.find((i) => i.type === "ISBN_10")?.identifier || null;
+        const cover =
+          v.imageLinks?.thumbnail?.replace("http:", "https:").replace("zoom=1", "zoom=0")
+          || (isbn13 ? `https://covers.openlibrary.org/b/isbn/${isbn13}-M.jpg` : null)
+          || (isbn10 ? `https://covers.openlibrary.org/b/isbn/${isbn10}-M.jpg` : null)
+          || null;
         return {
           google_books_id: item.id,
           title: v.title || "Untitled",
           author: (v.authors || []).join(", "),
-          cover_url: v.imageLinks?.thumbnail?.replace("http:", "https:").replace("zoom=1", "zoom=0") || null,
-          isbn_13: ids.find((i) => i.type === "ISBN_13")?.identifier || null,
-          isbn_10: ids.find((i) => i.type === "ISBN_10")?.identifier || null,
+          cover_url: cover,
+          isbn_13: isbn13,
+          isbn_10: isbn10,
         };
       }));
     } catch (e) {
@@ -823,7 +886,13 @@ export default function PublicReadingRoom() {
                                 style={hasCover ? {} : { background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}
                               >
                                 {hasCover ? (
-                                  <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img" />
+                                  <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                      e.target.parentElement.style.background = `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)`;
+                                      e.target.parentElement.innerHTML = `<div class="prr-book-cover-placeholder"><span class="prr-book-cover-placeholder-icon">📖</span><span class="prr-book-cover-title">${title.replace(/"/g, '&quot;')}</span></div>`;
+                                    }}
+                                  />
                                 ) : (
                                   <div className="prr-book-cover-placeholder"><span className="prr-book-cover-placeholder-icon">📖</span><span className="prr-book-cover-title">{title}</span></div>
                                 )}
@@ -901,7 +970,13 @@ export default function PublicReadingRoom() {
                     style={hasCover ? {} : { background: `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)` }}
                   >
                     {hasCover ? (
-                      <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img" />
+                      <img src={hiResCover(book.cover_url)} alt={title} className="prr-book-cover-img"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.parentElement.style.background = `linear-gradient(160deg, ${c1} 0%, ${c2} 100%)`;
+                          e.target.parentElement.innerHTML = `<div class="prr-book-cover-placeholder"><span class="prr-book-cover-placeholder-icon">📖</span><span class="prr-book-cover-title">${title.replace(/"/g, '&quot;')}</span></div>`;
+                        }}
+                      />
                     ) : (
                       <div className="prr-book-cover-placeholder"><span className="prr-book-cover-placeholder-icon">📖</span><span className="prr-book-cover-title">{title}</span></div>
                     )}
