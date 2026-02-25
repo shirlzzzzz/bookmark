@@ -494,7 +494,7 @@ const [selectedChild, setSelectedChild] = useState(null);
         setChildren(children.map(c => c.id === id ? { ...c, archived: false } : c));
     };
 
-    const addLog = async (childId, bookTitle, minutes, date, subject, genre, coverUrl) => {
+    const addLog = async (childId, bookTitle, minutes, date, subject, genre, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal) => {
         // Validation
         if (!childId) {
             setError('Please select a child');
@@ -525,7 +525,11 @@ const [selectedChild, setSelectedChild] = useState(null);
             date: date || new Date().toISOString().split('T')[0],
             subject: subject || null,
             genre: genre || null,
-            coverUrl: coverUrl || null
+            coverUrl: coverUrl || null,
+            timesRead: parseInt(timesRead) || 1,
+            isFinished: isFinished || false,
+            chapterCurrent: chapterCurrent && parseInt(chapterCurrent) > 0 ? parseInt(chapterCurrent) : null,
+            chapterTotal: chapterTotal && parseInt(chapterTotal) > 0 ? parseInt(chapterTotal) : null
         };
 
         // Write to Supabase if signed in
@@ -576,13 +580,19 @@ const [selectedChild, setSelectedChild] = useState(null);
         
         // Show celebration
         const child = children.find(c => c.id === childId);
-        setCelebration({
+        const celebrationData = {
             childName: child?.name || 'your child',
-            bookTitle: bookTitle.trim().split(' by ')[0]
-        });
+            bookTitle: bookTitle.trim().split(' by ')[0],
+            timesRead: parseInt(timesRead) || 1,
+            isFinished: isFinished || false,
+            coverUrl: coverUrl || null
+        };
+        setCelebration(celebrationData);
         
-        // Auto-dismiss celebration after 4 seconds
-        setTimeout(() => setCelebration(null), 4000);
+        // Auto-dismiss after 4 seconds (only for non-finished; finished stays for rating)
+        if (!isFinished) {
+            setTimeout(() => setCelebration(null), 4000);
+        }
         
         return true;
     };
@@ -870,7 +880,7 @@ const [selectedChild, setSelectedChild] = useState(null);
                 )}
 
                 {/* Celebration Banner */}
-                {celebration && (
+                {celebration && !celebration.isFinished && (
                     <div 
                         className="bg-gradient-to-r from-amber-100 to-orange-100 border-l-4 border-amber-500 p-4 m-4 rounded cursor-pointer"
                         onClick={() => setCelebration(null)}
@@ -879,12 +889,81 @@ const [selectedChild, setSelectedChild] = useState(null);
                             <span className="text-2xl">💜</span>
                             <div className="flex-1">
                                 <p className="font-medium text-amber-900">
-                                    Another memory saved 📖 You read {celebration.bookTitle} with {celebration.childName} today.
+                                    Another memory saved 📖 You read {celebration.bookTitle} with {celebration.childName}{celebration.timesRead > 1 ? ` (${celebration.timesRead} times!)` : ''} today.
                                 </p>
                                 <p className="text-sm text-amber-800 mt-1">
                                     Saved to your library — these are the ones you'll remember.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {celebration && celebration.isFinished && (
+                    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-5">
+                        {/* Confetti particles */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            {[...Array(40)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="absolute w-2 h-2 rounded-full"
+                                    style={{
+                                        left: `${Math.random() * 100}%`,
+                                        top: `-5%`,
+                                        backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6', '#10b981', '#3b82f6', '#ec4899'][i % 6],
+                                        animation: `confettiFall ${2 + Math.random() * 3}s ease-in forwards`,
+                                        animationDelay: `${Math.random() * 1.5}s`,
+                                    }}
+                                />
+                            ))}
+                        </div>
+                        <style>{`
+                            @keyframes confettiFall {
+                                0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                                100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+                            }
+                        `}</style>
+                        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center relative z-10 shadow-2xl">
+                            <div className="text-5xl mb-3">🎉</div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-1">Book complete!</h2>
+                            <p className="text-gray-500 mb-5">
+                                {celebration.childName} finished <span className="font-semibold text-gray-700">{celebration.bookTitle}</span>
+                                {celebration.timesRead > 1 ? ` (${celebration.timesRead} times!)` : ''}
+                            </p>
+                            {celebration.coverUrl && (
+                                <img src={celebration.coverUrl} alt="" className="w-20 h-28 object-cover rounded-lg shadow mx-auto mb-5" />
+                            )}
+                            <p className="text-sm font-medium text-gray-600 mb-3">How did they like it?</p>
+                            <div className="flex justify-center gap-4 mb-6">
+                                {[
+                                    { emoji: '🥰', label: 'Loved it' },
+                                    { emoji: '😊', label: 'Liked it' },
+                                    { emoji: '😐', label: 'It was ok' },
+                                ].map(({ emoji, label }) => (
+                                    <button
+                                        key={label}
+                                        onClick={() => {
+                                            // Save rating to the most recent log
+                                            const updatedLogs = [...logs];
+                                            if (updatedLogs.length > 0) {
+                                                updatedLogs[0] = { ...updatedLogs[0], rating: label };
+                                                setLogs(updatedLogs);
+                                            }
+                                            setCelebration(null);
+                                        }}
+                                        className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-amber-50 transition-colors"
+                                    >
+                                        <span className="text-3xl">{emoji}</span>
+                                        <span className="text-xs text-gray-500">{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setCelebration(null)}
+                                className="text-sm text-gray-400 hover:text-gray-600"
+                            >
+                                Skip
+                            </button>
                         </div>
                     </div>
                 )}
@@ -1002,7 +1081,7 @@ onLogBook={(book) => {
                         { id: 'library', icon: '📚', label: 'Library' },
                         { id: 'progress', icon: '📊', label: 'Progress' },
                         { id: 'readingroom', icon: '📖', label: 'Room' },
-                        { id: 'settings', icon: '⚙️', label: 'Settings' },
+                        { id: 'settings', icon: '🏠', label: 'Home' },
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -1334,7 +1413,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                 <p className="text-sm text-gray-400">
                     Set up your readers in
                     <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
-                        Reading Home
+                        Home
                     </button>
                     to start saving stories
                 </p>
@@ -1350,7 +1429,7 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                 className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all"
                 onClick={onAddLog}
             >
-                📖 Save Story
+                📖 Log a Reading Session
             </button>
 
             {recentLogs.length === 0 ? (
@@ -1401,6 +1480,21 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
                                         <span className="inline-block px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-full">
                                             {log.minutes} minutes
                                         </span>
+                                        {log.timesRead > 1 && (
+                                            <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full ml-1">
+                                                🔁 {log.timesRead}x
+                                            </span>
+                                        )}
+                                        {log.isFinished && (
+                                            <span className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full ml-1">
+                                                ✓ Done
+                                            </span>
+                                        )}
+                                        {log.rating && (
+                                            <span className="inline-block px-2 py-1 text-xs ml-1">
+                                                {log.rating === 'Loved it' ? '🥰' : log.rating === 'Liked it' ? '😊' : '😐'}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1412,31 +1506,54 @@ function LogView({ children, logs, onAddLog, onDeleteLog, onOpenSettings, family
     );
 }
 
-// Library View Component - Combines Log, Goals, and Bookshelf
+// Library View Component - Tabs: To Be Read / Books (grouped by book)
 function LibraryView({ children, logs, goals, challenges, onAddLog, onDeleteLog, onCreateGoal, onCompleteGoal, onDeleteGoal, onOpenSettings, selectedChild, onSelectChild, familyProfile, onLogBook }) {
-    const [section, setSection] = useState('recent');
-const [libSearchQuery, setLibSearchQuery] = useState('');
-    const [libSearchResults, setLibSearchResults] = useState([]);
-    const [libSearching, setLibSearching] = useState(false);
-    const [miniLog, setMiniLog] = useState(null);
-    const [miniLogChild, setMiniLogChild] = useState(children[0]?.id || '');
-    const [miniLogMinutes, setMiniLogMinutes] = useState('10');
+    const [activeTab, setActiveTab] = useState('books');
+    const [toReadList, setToReadList] = useState(() => getStorageData('mybookmark_toread', []));
+    const [expandedBook, setExpandedBook] = useState(null);
+    const [showAddToRead, setShowAddToRead] = useState(false);
+    const [addToReadQuery, setAddToReadQuery] = useState('');
+    const [addToReadResults, setAddToReadResults] = useState([]);
+    const [addToReadSearching, setAddToReadSearching] = useState(false);
     const babyEmoji = familyProfile?.babyEmoji || '👶';
 
-    const searchBooksForLib = async (query) => {
-        if (!query.trim()) return;
-        setLibSearching(true);
+    // Persist to-read list
+    useEffect(() => {
+        setStorageData('mybookmark_toread', toReadList);
+    }, [toReadList]);
+
+    // Search for to-read additions
+    const searchForToRead = async (query) => {
+        if (!query.trim() || query.length < 2) { setAddToReadResults([]); return; }
+        setAddToReadSearching(true);
         try {
-            const results = await searchBooksUnified(query, 8);
-            setLibSearchResults(results);
-        } catch (err) { setLibSearchResults([]); }
-        setLibSearching(false);
+            const results = await searchBooksUnified(query, 6);
+            setAddToReadResults(results || []);
+        } catch (err) { setAddToReadResults([]); }
+        setAddToReadSearching(false);
     };
 
-    const handleQuickLog = () => {
-        if (!miniLog || !miniLogChild) return;
-        onLogBook({ title: miniLog.author ? `${miniLog.title} by ${miniLog.author}` : miniLog.title, author: miniLog.author, cover: miniLog.coverUrl });
-        setMiniLog(null);
+    useEffect(() => {
+        const timer = setTimeout(() => { if (addToReadQuery) searchForToRead(addToReadQuery); }, 400);
+        return () => clearTimeout(timer);
+    }, [addToReadQuery]);
+
+    const addToReadListFn = (book) => {
+        const newItem = {
+            id: Date.now().toString(),
+            title: book.title || book.bookTitle || '',
+            author: book.author || '',
+            coverUrl: book.coverUrl || book.cover || null,
+            addedDate: new Date().toISOString(),
+        };
+        setToReadList(prev => [newItem, ...prev]);
+        setShowAddToRead(false);
+        setAddToReadQuery('');
+        setAddToReadResults([]);
+    };
+
+    const removeFromToRead = (id) => {
+        setToReadList(prev => prev.filter(item => item.id !== id));
     };
 
     if (children.length === 0) {
@@ -1447,7 +1564,7 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
-                        Reading Home
+                        Home
                     </button>
                     {' '}to start saving stories
                 </p>
@@ -1455,27 +1572,62 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
         );
     }
 
-    const recentLogs = logs.slice(0, 20);
     const activeGoals = goals.filter(g => !g.completed);
-    const uniqueBooks = [...new Map(logs.map(l => [l.bookTitle, l])).values()];
 
-    // Goals progress for each child
-    const childGoalSummary = children.map(child => {
-        const childGoals = activeGoals.filter(g => g.childId === child.id);
-        return { child, goals: childGoals };
-    }).filter(c => c.goals.length > 0);
+    // Group logs by book title for Books tab
+    const bookGroups = {};
+    logs.forEach(log => {
+        const key = log.bookTitle;
+        if (!bookGroups[key]) {
+            bookGroups[key] = {
+                bookTitle: log.bookTitle,
+                author: log.author || '',
+                coverUrl: log.coverUrl || null,
+                sessions: [],
+                totalMinutes: 0,
+                totalTimesRead: 0,
+                lastRead: log.date,
+                hasFinished: false,
+                rating: null,
+                chapterProgress: null,
+                chapterCurrent: null,
+                chapterTotal: null,
+            };
+        }
+        bookGroups[key].sessions.push(log);
+        bookGroups[key].totalMinutes += log.minutes || 0;
+        bookGroups[key].totalTimesRead += log.timesRead || 1;
+        if (log.isFinished) bookGroups[key].hasFinished = true;
+        if (log.rating && !bookGroups[key].rating) bookGroups[key].rating = log.rating;
+        if (log.chapterCurrent != null && log.chapterCurrent > 0 && log.chapterTotal) {
+            bookGroups[key].chapterCurrent = Math.max(bookGroups[key].chapterCurrent || 0, parseInt(log.chapterCurrent));
+            bookGroups[key].chapterTotal = parseInt(log.chapterTotal);
+            bookGroups[key].chapterProgress = (bookGroups[key].chapterCurrent / bookGroups[key].chapterTotal) * 100;
+        }
+        if (log.coverUrl && !bookGroups[key].coverUrl) {
+            bookGroups[key].coverUrl = log.coverUrl;
+        }
+    });
+
+    const groupedBooks = Object.values(bookGroups).sort((a, b) => 
+        new Date(b.sessions[0]?.date) - new Date(a.sessions[0]?.date)
+    );
+    const isFavorite = (b) => b.sessions.length > 1 || b.totalTimesRead > 1;
+
+    // Format minutes nicely
+    const fmtMin = (m) => {
+        if (m >= 60) return `${Math.floor(m/60)}hr ${m%60 > 0 ? m%60 + 'min' : ''}`.trim();
+        return `${m} min`;
+    };
 
     return (
         <div>
-            {/* ===== HOME SHELF ===== */}
-            
-
-            {/* Save Story Button */}
+            {/* Log a Reading Session Button */}
             <button 
                 className="w-full bg-amber-600 text-white py-3.5 px-6 rounded-lg font-medium hover:bg-amber-700 transition-all mb-4"
                 onClick={onAddLog}
             >
-                📖 Save Story
+                📖 Log a Reading Session
             </button>
 
             {/* Active Goals Summary */}
@@ -1495,71 +1647,257 @@ const [libSearchQuery, setLibSearchQuery] = useState('');
                                         <div className="text-xs text-gray-500">{child?.name}</div>
                                     </div>
                                     <div className="flex gap-2 ml-2">
-                                        <button 
-                                            onClick={() => onCompleteGoal(goal.id)}
-                                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium"
-                                        >
-                                            ✓ Done
-                                        </button>
-                                        <button 
-                                            onClick={() => onDeleteGoal(goal.id)}
-                                            className="text-xs text-gray-400 hover:text-red-500"
-                                        >
-                                            ✕
-                                        </button>
+                                        <button onClick={() => onCompleteGoal(goal.id)} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">✓ Done</button>
+                                        <button onClick={() => onDeleteGoal(goal.id)} className="text-xs text-gray-400 hover:text-red-500">✕</button>
                                     </div>
                                 </div>
                             );
                         })}
-                        {activeGoals.length > 3 && (
-                            <p className="text-xs text-gray-400 text-center">+{activeGoals.length - 3} more goals</p>
-                        )}
                     </div>
                 </div>
             )}
 
-            
+            {/* ===== TABS ===== */}
+            <div className="flex border-b-2 border-gray-200 mb-4">
+                <button
+                    className={`flex-1 py-3 text-sm font-semibold text-center relative transition-colors ${
+                        activeTab === 'toread' ? 'text-amber-700' : 'text-gray-400'
+                    }`}
+                    onClick={() => setActiveTab('toread')}
+                >
+                    📖 To Be Read
+                    {toReadList.length > 0 && (
+                        <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                            activeTab === 'toread' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                        }`}>{toReadList.length}</span>
+                    )}
+                    {activeTab === 'toread' && <div className="absolute bottom-[-2px] left-[10%] right-[10%] h-[3px] bg-amber-600 rounded-t" />}
+                </button>
+                <button
+                    className={`flex-1 py-3 text-sm font-semibold text-center relative transition-colors ${
+                        activeTab === 'books' ? 'text-amber-700' : 'text-gray-400'
+                    }`}
+                    onClick={() => setActiveTab('books')}
+                >
+                    📚 Books
+                    {groupedBooks.length > 0 && (
+                        <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                            activeTab === 'books' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                        }`}>{groupedBooks.length}</span>
+                    )}
+                    {activeTab === 'books' && <div className="absolute bottom-[-2px] left-[10%] right-[10%] h-[3px] bg-amber-600 rounded-t" />}
+                </button>
+            </div>
 
-            {/* Recent Sessions */}
-            {recentLogs.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                    <div className="text-5xl mb-3">📖</div>
-                    <p className="text-sm">No reading sessions yet</p>
-                    <p className="text-xs mt-1">Tap "Save Story" to keep your first memory!</p>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-700">Recent Sessions</h3>
-                    {recentLogs.map(log => {
-                        const child = children.find(c => c.id === log.childId);
-                        return (
-                            <div key={log.id} className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-xl">
-                                {log.coverUrl ? (
-                                    <img src={log.coverUrl} alt="" className="w-12 h-16 object-contain bg-white rounded-lg shadow-sm flex-shrink-0" />
-                                ) : (
-                                    <div className="w-12 h-16 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                        <span className="text-lg">📖</span>
+            {/* ===== TO READ TAB ===== */}
+            {activeTab === 'toread' && (
+                <div>
+                    {toReadList.length === 0 && !showAddToRead ? (
+                        <div className="text-center py-12">
+                            <p className="text-sm text-gray-500 mb-3">No books on your list yet.</p>
+                            <button
+                                onClick={() => setShowAddToRead(true)}
+                                className="text-sm text-amber-700 font-semibold hover:text-amber-800"
+                            >
+                                + Add a book
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {toReadList.map(item => (
+                                <div key={item.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl">
+                                    {item.coverUrl ? (
+                                        <img src={item.coverUrl} alt="" className="w-12 h-16 object-contain bg-white rounded-lg shadow-sm flex-shrink-0" onError={(e) => e.target.style.display='none'} />
+                                    ) : (
+                                        <div className="w-12 h-16 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span className="text-lg">📖</span>
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm text-gray-800 truncate">{item.title}</div>
+                                        {item.author && <div className="text-xs text-gray-500">by {item.author}</div>}
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            Added {new Date(item.addedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => removeFromToRead(item.id)}
+                                        className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 border border-gray-200 rounded-lg"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+
+                            {/* Add to read button */}
+                            <button
+                                onClick={() => setShowAddToRead(true)}
+                                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm font-semibold text-gray-400 hover:border-amber-500 hover:text-amber-600 transition-all"
+                            >
+                                + Add a book
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Add to read modal */}
+                    {showAddToRead && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={() => { setShowAddToRead(false); setAddToReadQuery(''); setAddToReadResults([]); }}>
+                            <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+                                <h3 className="text-lg font-semibold mb-3">Add to your reading list</h3>
+                                <input
+                                    type="text"
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                                    placeholder="Search by title or author..."
+                                    value={addToReadQuery}
+                                    onChange={(e) => setAddToReadQuery(e.target.value)}
+                                    autoFocus
+                                />
+                                {addToReadSearching && (
+                                    <p className="text-sm text-gray-400 text-center py-3">Searching...</p>
+                                )}
+                                {addToReadResults.length > 0 && (
+                                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                                        {addToReadResults.map((book, idx) => (
+                                            <button
+                                                key={idx}
+                                                className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-amber-50 rounded-lg text-left transition-colors"
+                                                onClick={() => addToReadListFn(book)}
+                                            >
+                                                {book.coverUrl ? (
+                                                    <img src={book.coverUrl} alt="" className="w-10 h-14 object-contain bg-white rounded shadow-sm flex-shrink-0" onError={(e) => e.target.style.display='none'} />
+                                                ) : (
+                                                    <div className="w-10 h-14 bg-amber-100 rounded flex items-center justify-center flex-shrink-0 text-sm">📖</div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-medium text-gray-800 truncate">{book.title}</div>
+                                                    {book.author && <div className="text-xs text-gray-500">by {book.author}</div>}
+                                                </div>
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                        <div className="font-medium text-sm text-gray-800">{child?.name || children[0]?.name || 'Unknown'}</div>
-                                        <button 
-                                            onClick={() => onDeleteLog(log.id)}
-                                            className="text-xs text-red-500 hover:text-red-700 px-1 py-1"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                    <div className="text-xs text-gray-500">{new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                                    <div className="text-sm text-gray-600 mb-2 truncate">{log.bookTitle}{log.author ? ` by ${log.author}` : ''}</div>
-                                    <span className="inline-block px-3 py-1 bg-amber-600 text-white text-xs font-medium rounded-full">
-                                        {log.minutes} minutes
-                                    </span>
-                                </div>
+                                {addToReadQuery.length >= 2 && !addToReadSearching && addToReadResults.length === 0 && (
+                                    <p className="text-sm text-gray-400 text-center py-3">No books found. Try a different search.</p>
+                                )}
+                                <button
+                                    onClick={() => { setShowAddToRead(false); setAddToReadQuery(''); setAddToReadResults([]); }}
+                                    className="w-full mt-3 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium"
+                                >
+                                    Cancel
+                                </button>
                             </div>
-                        );
-                    })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ===== BOOKS TAB (grouped by book) ===== */}
+            {activeTab === 'books' && (
+                <div>
+                    {groupedBooks.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400">
+                            <div className="text-5xl mb-3">📚</div>
+                            <p className="text-sm">No reading sessions yet</p>
+                            <p className="text-xs mt-1">Tap "Log a Reading Session" to keep your first memory!</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {/* In Progress / Completed */}
+
+                            {/* In Progress */}
+                            {(() => {
+                                const inProgress = groupedBooks.filter(b => !b.hasFinished && b.chapterTotal > 0);
+                                const completed = groupedBooks.filter(b => b.hasFinished || !b.chapterTotal);
+                                
+                                const renderBookCard = (group, prefix = '') => {
+                                    const key = prefix + group.bookTitle;
+                                    const isCompleted = group.hasFinished || !group.chapterTotal;
+                                    return (
+                                        <div key={key} className={`bg-white border rounded-xl mb-2 overflow-hidden ${isCompleted ? 'border-green-200' : 'border-gray-200'}`}>
+                                            <button
+                                                className="w-full flex items-center gap-3 p-3 text-left"
+                                                onClick={() => setExpandedBook(expandedBook === key ? null : key)}
+                                            >
+                                                {group.coverUrl ? (
+                                                    <img src={group.coverUrl} alt="" className="w-12 h-16 object-contain bg-white rounded-lg shadow-sm flex-shrink-0" onError={(e) => e.target.style.display='none'} />
+                                                ) : (
+                                                    <div className={`w-12 h-16 rounded-lg flex items-center justify-center flex-shrink-0 ${isCompleted ? 'bg-green-50' : 'bg-amber-50'}`}><span className="text-lg">📖</span></div>
+                                                )}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-sm text-gray-800 truncate">{group.bookTitle}</div>
+                                                    {group.author && <div className="text-xs text-gray-500">{group.author}</div>}
+                                                    {group.chapterProgress && !isCompleted && (
+                                                        <div className="mt-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, group.chapterProgress)}%` }} />
+                                                                </div>
+                                                                <span className="text-xs text-gray-400">Ch {group.chapterCurrent}/{group.chapterTotal}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">📖 {group.sessions.length} session{group.sessions.length !== 1 ? 's' : ''}</span>
+                                                        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">⏱ {fmtMin(group.totalMinutes)}</span>
+                                                        {group.totalTimesRead > group.sessions.length && (
+                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600 font-medium">🔁 {group.totalTimesRead}x total</span>
+                                                        )}
+                                                        {isFavorite(group) && (
+                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-400 font-medium">💜 Favorite</span>
+                                                        )}
+                                                        {isCompleted && group.rating && (
+                                                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-50 text-gray-600">{group.rating === 'Loved it' ? '🥰' : group.rating === 'Liked it' ? '😊' : '😐'} {group.rating}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className={`text-xs text-gray-300 transition-transform ${expandedBook === key ? 'rotate-180' : ''}`}>▼</span>
+                                            </button>
+                                            {expandedBook === key && (
+                                                <div className="border-t border-gray-100">
+                                                    {group.sessions.map(log => {
+                                                        const child = children.find(c => c.id === log.childId);
+                                                        return (
+                                                            <div key={log.id} className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-50 text-sm">
+                                                                <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                                                                <span className="font-medium text-gray-700">{child?.name}</span>
+                                                                <span className="text-gray-400">·</span>
+                                                                <span className="text-gray-500">{new Date(log.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                                {log.timesRead > 1 && <span className="text-xs text-purple-600 font-medium">🔁 {log.timesRead}x</span>}
+                                                                {log.isFinished && <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 font-medium">✓</span>}
+                                                                {log.rating && <span className="text-xs">{log.rating === 'Loved it' ? '🥰' : log.rating === 'Liked it' ? '😊' : '😐'}</span>}
+                                                                {log.chapterCurrent != null && log.chapterTotal != null && log.chapterCurrent > 0 && (
+                                                                    <span className="text-xs text-gray-400">Ch {log.chapterCurrent}/{log.chapterTotal}</span>
+                                                                )}
+                                                                <span className="ml-auto px-2 py-0.5 bg-amber-600 text-white text-xs rounded-full font-medium">{log.minutes}m</span>
+                                                                <button onClick={() => onDeleteLog(log.id)} className="text-xs text-red-400 hover:text-red-600 ml-1">Delete</button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                };
+
+                                return (
+                                    <>
+                                        {inProgress.length > 0 && (
+                                            <div className="mb-3">
+                                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">📖 In Progress ({inProgress.length})</h3>
+                                                {inProgress.map(group => renderBookCard(group, 'ip-'))}
+                                            </div>
+                                        )}
+                                        {completed.length > 0 && (
+                                            <div className="mb-3">
+                                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">✅ Completed ({completed.length})</h3>
+                                                {completed.map(group => renderBookCard(group, 'done-'))}
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -2120,7 +2458,7 @@ function ProgressView({ children, logs, onOpenSettings, familyProfile, selectedC
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
-                        Reading Home
+                        Home
                     </button>
                     {' '}to start saving stories
                 </p>
@@ -2468,7 +2806,7 @@ function BookshelfView({ children, logs, onOpenSettings, familyProfile }) {
                 <p className="text-sm text-gray-400">
                     Set up your readers in{' '}
                     <button onClick={onOpenSettings} className="text-amber-700 hover:text-amber-900 underline font-medium">
-                        Reading Home
+                        Home
                     </button>
                     {' '}to start saving stories
                 </p>
@@ -2599,7 +2937,7 @@ function AddChildModal({ onClose, onAdd }) {
                             />
                             
                         
-                            <div className="text-xs text-gray-500 mt-2">Set goals later in Reading Home.</div>
+                            <div className="text-xs text-gray-500 mt-2">Set goals later in Home.</div>
 </div>
                     )}
 
@@ -2639,7 +2977,7 @@ function AddChildModal({ onClose, onAdd }) {
                         className="w-full bg-gray-200 text-gray-700 py-3.5 px-6 rounded-lg font-medium hover:bg-gray-300 transition-all"
                         onClick={onClose}
                     >
-                        Back to Reading Home
+                        Back to Home
                     </button>
                 </form>
             </div>
@@ -2772,13 +3110,42 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     const [voiceError, setVoiceError] = useState('');
     const [coverUrl, setCoverUrl] = useState(prefillBook?.cover || null);
     const [coverLoading, setCoverLoading] = useState(false);
-    const [chapterProgress, setChapterProgress] = useState(''); // e.g., "Chapter 5" or "50%"
+    const [chapterCurrent, setChapterCurrent] = useState('');
+    const [chapterTotal, setChapterTotal] = useState('');
+    const [bookType, setBookType] = useState('picture'); // 'picture' or 'chapter'
+    const [timesRead, setTimesRead] = useState(1);
+    const [isFinished, setIsFinished] = useState(false);
 
-    const quickMinutes = [10, 15, 20, 30];
+    // Look up last chapter data for a book
+    const prefillChaptersFromHistory = (title) => {
+        if (!title || !logs.length) return;
+        const titleLower = title.toLowerCase();
+        const bookLogs = logs
+            .filter(l => {
+                const logTitle = (l.bookTitle || '').toLowerCase();
+                return (logTitle === titleLower || logTitle.startsWith(titleLower) || titleLower.startsWith(logTitle)) 
+                    && l.chapterCurrent > 0 && l.chapterTotal > 0;
+            })
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (bookLogs.length > 0) {
+            const last = bookLogs[0];
+            setChapterCurrent(String(last.chapterCurrent));
+            setChapterTotal(String(last.chapterTotal));
+            setBookType('chapter');
+        }
+    };
+
+    // Pre-fill chapters if opening with a prefillBook
+    useEffect(() => {
+        if (prefillBook?.title) {
+            prefillChaptersFromHistory(prefillBook.title);
+        }
+    }, []);
+
+    const quickMinutes = bookType === 'chapter' ? [15, 20, 30, 60] : [10, 15, 20, 30];
     
     // Check if selected child is older (student/homeschool)
     const selectedChild = children.find(c => c.id === selectedChildId);
-    const isOlderChild = selectedChild?.childType === 'student' || selectedChild?.childType === 'homeschool';
 
     // Check if on iOS (speech recognition doesn't work on iOS browsers)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -2834,6 +3201,9 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
         setBookTitle(fullTitle);
         setShowSuggestions(false);
         setSuggestions([]);
+        
+        // Pre-fill chapter data from previous sessions
+        prefillChaptersFromHistory(fullTitle);
         
         // Use existing cover URL if provided (from Google search), otherwise fetch
         if (existingCoverUrl) {
@@ -3011,14 +3381,14 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (selectedChildId && bookTitle.trim() && minutes) {
-            onAdd(selectedChildId, bookTitle.trim(), minutes, date, null, null, coverUrl);
+            onAdd(selectedChildId, bookTitle.trim(), minutes, date, null, null, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal);
         }
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <h2 className="text-xl font-semibold mb-5 text-gray-800">Save a Story</h2>
+                <h2 className="text-xl font-semibold mb-5 text-gray-800">📖 Log a Reading Session</h2>
                 
                 {/* Voice Input Section */}
                 {isSpeechSupported && (
@@ -3192,6 +3562,34 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                         </div>
                     )}
 
+                    {/* Book type toggle */}
+                    <div className="mb-4">
+                        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setBookType('picture')}
+                                className={`flex-1 py-2.5 text-sm font-medium transition-all ${
+                                    bookType === 'picture'
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                                }`}
+                            >
+                                🖼️ Picture book
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setBookType('chapter'); setTimesRead(1); }}
+                                className={`flex-1 py-2.5 text-sm font-medium transition-all ${
+                                    bookType === 'chapter'
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                                }`}
+                            >
+                                📖 Chapter book
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Minutes *</label>
                         <input
@@ -3215,25 +3613,106 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                                     }`}
                                     onClick={() => setMinutes(m.toString())}
                                 >
-                                    {m}m
+                                    {m >= 60 ? `${m / 60}hr` : `${m}m`}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Chapter Progress - for older kids */}
-                    {isOlderChild && (
+                    {/* Rereads - picture books only */}
+                    {bookType === 'picture' && (
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Progress <span className="text-gray-400 font-normal">(optional)</span>
+                            <label className="block text-sm font-medium text-gray-700 mb-2 text-center">
+                                How many rereads?
                             </label>
-                            <input
-                                type="text"
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                                value={chapterProgress}
-                                onChange={(e) => setChapterProgress(e.target.value)}
-                                placeholder="e.g., Chapter 5, Page 120, 50%"
-                            />
+                            <div className="flex items-center justify-center gap-3">
+                                <button
+                                    type="button"
+                                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-lg font-bold text-gray-600 hover:border-amber-500 hover:text-amber-600 transition-all"
+                                    onClick={() => setTimesRead(Math.max(1, timesRead - 1))}
+                                >
+                                    −
+                                </button>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-bold" style={{ color: '#C4873A' }}>{timesRead}</span>
+                                    <span className="text-sm text-gray-500 font-medium">{timesRead === 1 ? 'time' : 'times'}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="w-10 h-10 rounded-full border-2 border-gray-200 flex items-center justify-center text-lg font-bold text-gray-600 hover:border-amber-500 hover:text-amber-600 transition-all"
+                                    onClick={() => setTimesRead(Math.min(10, timesRead + 1))}
+                                >
+                                    +
+                                </button>
+                            </div>
+                            <div className="text-center mt-1">
+                                <span className="text-xs text-gray-400 italic">
+                                    {timesRead === 2 ? '"Again!"' : timesRead === 3 ? '"One more time!"' : timesRead >= 4 ? 'A true favorite 🥰' : ''}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Chapter book options */}
+                    {bookType === 'chapter' && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg space-y-3">
+                            {/* Chapter progress */}
+                            <div>
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <span>Chapter</span>
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min="0"
+                                        className="w-16 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-center bg-white"
+                                        value={chapterCurrent}
+                                        onChange={(e) => {
+                                            setChapterCurrent(e.target.value);
+                                            if (chapterTotal && parseInt(e.target.value) >= parseInt(chapterTotal)) {
+                                                setIsFinished(true);
+                                            }
+                                        }}
+                                    />
+                                    <span>of</span>
+                                    <input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min="1"
+                                        className="w-16 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-center bg-white"
+                                        value={chapterTotal}
+                                        onChange={(e) => setChapterTotal(e.target.value)}
+                                    />
+                                </div>
+                                {chapterTotal && parseInt(chapterTotal) > 0 && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all ${parseInt(chapterCurrent) >= parseInt(chapterTotal) ? 'bg-green-500' : 'bg-amber-500'}`}
+                                                style={{ width: `${Math.min(100, ((parseInt(chapterCurrent) || 0) / parseInt(chapterTotal)) * 100)}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                                            {!chapterCurrent || parseInt(chapterCurrent) === 0 ? 'Not started' : `${Math.round((parseInt(chapterCurrent) / parseInt(chapterTotal)) * 100)}%`}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Finished toggle */}
+                            <button
+                                type="button"
+                                onClick={() => setIsFinished(!isFinished)}
+                                className={`w-full flex items-center justify-between p-2.5 rounded-lg border transition-all ${
+                                    isFinished
+                                        ? 'border-green-500 bg-green-50'
+                                        : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
+                            >
+                                <span className="text-sm font-medium text-gray-700">We finished this book!</span>
+                                <span className={`w-10 h-6 rounded-full relative transition-colors ${isFinished ? 'bg-green-500' : 'bg-gray-200'}`}>
+                                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isFinished ? 'left-[18px]' : 'left-0.5'}`} />
+                                </span>
+                            </button>
                         </div>
                     )}
 
@@ -3823,7 +4302,7 @@ function SettingsTab({
             {user && (<>
             {/* Header */}
             <div className="text-center mb-6">
-                <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Reading Home</h2>
+                <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Home</h2>
                 <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                 <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
             </div>
@@ -3870,6 +4349,31 @@ function SettingsTab({
                                         <div className="text-xs text-gray-500 mt-1">
                                             {stats.totalBooks} book{stats.totalBooks !== 1 ? 's' : ''} · {stats.hours > 0 ? `${stats.hours}h ` : ''}{stats.mins}m reading
                                         </div>
+                                        {stats.totalBooks === 0 && logs.length > 0 && (
+                                            <div className="text-xs text-red-400 mt-1">
+                                                ⚠️ {logs.length} logs exist but none match this reader.
+                                                <button 
+                                                    onClick={() => {
+                                                        const logChildIds = [...new Set(logs.map(l => l.childId))];
+                                                        const orphanedIds = logChildIds.filter(id => !children.find(c => c.id === id));
+                                                        if (orphanedIds.length > 0 && confirm(`Found ${logs.filter(l => orphanedIds.includes(l.childId)).length} orphaned logs. Reassign them to ${child.name}?`)) {
+                                                            const fixed = logs.map(l => 
+                                                                orphanedIds.includes(l.childId) ? { ...l, childId: child.id } : l
+                                                            );
+                                                            // This triggers a re-render with fixed data
+                                                            // We need to call the parent's setLogs — for now use localStorage directly
+                                                            localStorage.setItem('mybookmark_logs', JSON.stringify(fixed));
+                                                            window.location.reload();
+                                                        } else {
+                                                            alert(`Child ID: ${child.id}\nLog childIds: ${logChildIds.join(', ')}`);
+                                                        }
+                                                    }}
+                                                    className="underline ml-1 text-amber-600"
+                                                >
+                                                    Fix it
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex gap-2">
                                         <button onClick={() => setEditingChild(child)} className="text-xs text-amber-700 font-medium">Edit</button>
@@ -3946,7 +4450,7 @@ function SettingsTab({
     );
 }
 
-// Reading Home — A place for your family's reading life
+// Home — A place for your family's reading life
 function SettingsModal({ 
     familyProfile, 
     setFamilyProfile, 
@@ -4004,7 +4508,7 @@ function SettingsModal({
                 <div className="p-6 pb-4 border-b border-gray-100 relative">
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
                     <div className="text-center">
-                        <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Reading Home</h2>
+                        <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Home</h2>
                         <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                         <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
                     </div>
