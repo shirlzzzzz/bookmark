@@ -334,12 +334,14 @@ const [selectedChild, setSelectedChild] = useState(null);
             }
 
             try {
-                // Load reading logs
-                const { data: dbLogs } = await supabase
+                // Load reading logs - query by child_ids since reading_logs has no user_id column
+                const childIds = (await supabase.from('children').select('id').eq('user_id', user.id))
+                    ?.data?.map(c => c.id) || [];
+                const { data: dbLogs } = childIds.length > 0 ? await supabase
                     .from('reading_logs')
                     .select('*')
-                    .eq('user_id', user.id)
-                    .order('date', { ascending: false });
+                    .in('child_id', childIds)
+                    .order('date', { ascending: false }) : { data: [] };
                 
                 if (dbLogs && dbLogs.length > 0) {
                     const mappedLogs = dbLogs.map(l => ({
@@ -560,7 +562,6 @@ const [selectedChild, setSelectedChild] = useState(null);
                 const { data: sbLog, error: logError } = await supabase
                     .from('reading_logs')
                     .insert({
-                        user_id: user.id,
                         child_id: childId,
                         book_id: bookId,
                         date: newLog.date,
