@@ -3721,7 +3721,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
                         <input
                             type="date"
-                            className="w-auto p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            className="w-auto p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent block mx-auto"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             max={new Date().toISOString().split('T')[0]}
