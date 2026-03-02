@@ -339,7 +339,7 @@ const [selectedChild, setSelectedChild] = useState(null);
                     ?.data?.map(c => c.id) || [];
                 const { data: dbLogs } = childIds.length > 0 ? await supabase
                     .from('reading_logs')
-                    .select('*')
+                    .select('*, books(title, author, cover_url)')
                     .in('child_id', childIds)
                     .order('date', { ascending: false }) : { data: [] };
                 
@@ -347,9 +347,9 @@ const [selectedChild, setSelectedChild] = useState(null);
                     const mappedLogs = dbLogs.map(l => ({
                         id: l.id,
                         childId: l.child_id,
-                        bookTitle: l.book_title || l.bookTitle || '',
-                        author: l.author || '',
-                        coverUrl: l.cover_url || '',
+                        bookTitle: l.books?.title || l.book_title || '',
+                        author: l.books?.author || l.author || '',
+                        coverUrl: l.books?.cover_url || l.cover_url || '',
                         date: l.date,
                         minutes: l.minutes,
                         notes: l.notes || '',
