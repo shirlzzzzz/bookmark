@@ -46,6 +46,10 @@ function spineHeight(title) {
   return base + (Math.abs(h) % 50);
 }
 
+function shelfSlug(name) {
+  return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 function hiResCover(url) {
   if (!url) return null;
   return url.replace("zoom=1", "zoom=0").replace("&edge=curl", "");
@@ -77,6 +81,7 @@ export default function PublicReadingRoom() {
   const [newShelfDesc, setNewShelfDesc] = useState("");
   const [savingShelf, setSavingShelf] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [copiedShelfId, setCopiedShelfId] = useState(null);
   const [editError, setEditError] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
@@ -112,6 +117,14 @@ export default function PublicReadingRoom() {
     }
     if (profile) checkOwner();
   }, [profile]);
+
+  // Scroll to shelf anchor on load
+  useEffect(() => {
+    if (!loading && shelves.length > 0 && window.location.hash) {
+      const el = document.querySelector(window.location.hash);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    }
+  }, [loading, shelves]);
 
   // Reload data helper
   async function reloadData() {
@@ -766,7 +779,7 @@ export default function PublicReadingRoom() {
               const items = booksByShelf.get(shelf.id) || [];
               const isAdding = addingToShelf === shelf.id;
               return (
-                <div key={shelf.id} className="prr-shelf-section">
+                <div key={shelf.id} id={`shelf-${shelfSlug(shelf.name)}`} className="prr-shelf-section">
                   <div className="prr-section-header">
                     {editingShelfId === shelf.id ? (
                       <div style={{ flex: 1 }}>
@@ -802,6 +815,20 @@ export default function PublicReadingRoom() {
                           </span>
                         </div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <button
+                            className="prr-shelf-action"
+                            title="Copy link to this shelf"
+                            onClick={() => {
+                              const url = `${window.location.origin}/@${username}#shelf-${shelfSlug(shelf.name)}`;
+                              navigator.clipboard.writeText(url).then(() => {
+                                setCopiedShelfId(shelf.id);
+                                setTimeout(() => setCopiedShelfId(null), 2000);
+                              });
+                            }}
+                            style={{ fontSize: "0.75rem", minWidth: 28 }}
+                          >
+                            {copiedShelfId === shelf.id ? "✓" : "🔗"}
+                          </button>
                           {isOwner && (
                             <>
                               <button className="prr-shelf-action" onClick={() => moveShelf(shelf.id, "up")} title="Move up" disabled={shelves.indexOf(shelf) === 0}>↑</button>
