@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 
-const FALLBACK_AMAZON_TAG = "YOURTAG-20";
+const FALLBACK_AMAZON_TAG = import.meta.env.VITE_AMAZON_FALLBACK_TAG || "ourbookmark-20";
 
 function amazonLink(book, profile) {
   const tag = profile?.affiliate_amazon || FALLBACK_AMAZON_TAG;
@@ -46,10 +46,6 @@ function spineHeight(title) {
   return base + (Math.abs(h) % 50);
 }
 
-function shelfSlug(name) {
-  return (name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
-
 function hiResCover(url) {
   if (!url) return null;
   return url.replace("zoom=1", "zoom=0").replace("&edge=curl", "");
@@ -81,7 +77,6 @@ export default function PublicReadingRoom() {
   const [newShelfDesc, setNewShelfDesc] = useState("");
   const [savingShelf, setSavingShelf] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  const [copiedShelfId, setCopiedShelfId] = useState(null);
   const [editError, setEditError] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
@@ -117,14 +112,6 @@ export default function PublicReadingRoom() {
     }
     if (profile) checkOwner();
   }, [profile]);
-
-  // Scroll to shelf anchor on load
-  useEffect(() => {
-    if (!loading && shelves.length > 0 && window.location.hash) {
-      const el = document.querySelector(window.location.hash);
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-    }
-  }, [loading, shelves]);
 
   // Reload data helper
   async function reloadData() {
@@ -204,14 +191,9 @@ export default function PublicReadingRoom() {
       return;
     }
 
-    // 2) Fallback: Google Books with Open Library cover fallback
+    // 2) Fallback: Google Books via proxy
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
-      const qEnc = encodeURIComponent(q);
-      const url = apiKey
-        ? `https://www.googleapis.com/books/v1/volumes?q=${qEnc}&maxResults=6&key=${apiKey}`
-        : `https://www.googleapis.com/books/v1/volumes?q=${qEnc}&maxResults=6`;
-      const res = await fetch(url);
+      const res = await fetch(`/api/google-books?q=${encodeURIComponent(q)}&maxResults=6`);
       const data = await res.json();
       setBookResults((data.items || []).map((item) => {
         const v = item.volumeInfo || {};
@@ -240,6 +222,7 @@ export default function PublicReadingRoom() {
   }
 
   async function addBookToShelf(book, shelfId) {
+    if (!isOwner) return;
     setEditError("");
     let bookId = null;
     const { data: existing } = await supabase.from("books").select("id").eq("title", book.title).limit(1);
@@ -265,11 +248,13 @@ export default function PublicReadingRoom() {
   }
 
   async function removeBookFromShelf(shelfBookId) {
+    if (!isOwner) return;
     await supabase.from("shelf_books").delete().eq("id", shelfBookId);
     await reloadData();
   }
 
   async function createNewShelf() {
+    if (!isOwner) return;
     if (!newShelfName.trim()) return;
     setSavingShelf(true);
     await supabase.from("shelves").insert({
@@ -281,6 +266,7 @@ export default function PublicReadingRoom() {
   }
 
   async function renameShelf(shelfId) {
+    if (!isOwner) return;
     if (!editingShelfName.trim()) return;
     await supabase.from("shelves").update({
       name: editingShelfName.trim(),
@@ -293,6 +279,7 @@ export default function PublicReadingRoom() {
   }
 
   async function moveShelf(shelfId, direction) {
+    if (!isOwner) return;
     const idx = shelves.findIndex(s => s.id === shelfId);
     if (idx < 0) return;
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
@@ -307,6 +294,7 @@ export default function PublicReadingRoom() {
   }
 
   async function deleteShelf(shelfId) {
+    if (!isOwner) return;
     if (!window.confirm("Delete this shelf and remove all its books? This can't be undone.")) return;
     await supabase.from("shelf_books").delete().eq("shelf_id", shelfId);
     await supabase.from("shelves").delete().eq("id", shelfId);
@@ -314,6 +302,7 @@ export default function PublicReadingRoom() {
   }
 
   async function handleAvatarUpload(e) {
+    if (!isOwner) return;
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarUploading(true);
@@ -351,6 +340,7 @@ export default function PublicReadingRoom() {
   }
 
   async function saveProfileEdit() {
+    if (!isOwner) return;
     setSavingHeader(true);
     const trimmed = bioValue.trim();
     await supabase.from("profiles").update({
@@ -365,6 +355,7 @@ export default function PublicReadingRoom() {
   }
 
   async function saveStatsConfig() {
+    if (!isOwner) return;
     setSavingHeader(true);
     await supabase.from("profiles").update({ header_widgets: headerConfig }).eq("id", profile.id);
     setSavingHeader(false);
@@ -779,7 +770,7 @@ export default function PublicReadingRoom() {
               const items = booksByShelf.get(shelf.id) || [];
               const isAdding = addingToShelf === shelf.id;
               return (
-                <div key={shelf.id} id={`shelf-${shelfSlug(shelf.name)}`} className="prr-shelf-section">
+                <div key={shelf.id} className="prr-shelf-section">
                   <div className="prr-section-header">
                     {editingShelfId === shelf.id ? (
                       <div style={{ flex: 1 }}>
@@ -815,20 +806,6 @@ export default function PublicReadingRoom() {
                           </span>
                         </div>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button
-                            className="prr-shelf-action"
-                            title="Copy link to this shelf"
-                            onClick={() => {
-                              const url = `${window.location.origin}/@${username}#shelf-${shelfSlug(shelf.name)}`;
-                              navigator.clipboard.writeText(url).then(() => {
-                                setCopiedShelfId(shelf.id);
-                                setTimeout(() => setCopiedShelfId(null), 2000);
-                              });
-                            }}
-                            style={{ fontSize: "0.75rem", minWidth: 28 }}
-                          >
-                            {copiedShelfId === shelf.id ? "✓" : "🔗"}
-                          </button>
                           {isOwner && (
                             <>
                               <button className="prr-shelf-action" onClick={() => moveShelf(shelf.id, "up")} title="Move up" disabled={shelves.indexOf(shelf) === 0}>↑</button>

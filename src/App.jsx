@@ -37,9 +37,7 @@ const getWeekStart = (date = new Date()) => {
     return new Date(d.setDate(diff));
 };
 
-// ── Book Search: ISBNdb (primary) → Google Books (fallback) ──
-const GOOGLE_BOOKS_API_KEY = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY || '';
-const gbKey = GOOGLE_BOOKS_API_KEY ? `&key=${GOOGLE_BOOKS_API_KEY}` : '';
+// ── Book Search: ISBNdb (primary) → Google Books proxy (fallback) ──
 
 // Build best cover URL: direct image → Open Library via ISBN → null
 const bestCover = (image, isbn13, isbn10) => {
@@ -102,10 +100,10 @@ const searchISBNdb = async (query, maxResults = 8) => {
   });
 };
 
-// Shared helper: search Google Books (fallback) with Open Library cover fallback
+// Shared helper: search Google Books via proxy (fallback) with Open Library cover fallback
 const searchGoogleBooksAPI = async (query, maxResults = 8) => {
   const res = await fetch(
-    `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=${maxResults}&printType=books${gbKey}`
+    `/api/google-books?q=${encodeURIComponent(query)}&maxResults=${maxResults}`
   );
   if (!res.ok) return [];
   const data = await res.json();
@@ -840,7 +838,7 @@ const [selectedChild, setSelectedChild] = useState(null);
                                 /* Compact header for returning users */
                                 <div>
                                     <h1 className="text-xl font-semibold mb-1" style={{ fontFamily: "'Playfair Display', serif", color: '#1C1712' }}>
-                                        📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'OurBookmark'}
+                                        📚 The {familyProfile?.familyName || 'My'} Family Library
                                     </h1>
                                     <p className="text-sm" style={{ color: '#8C7F72' }}>
                                         {daysReadThisWeek === 0 
@@ -4304,26 +4302,29 @@ function SettingsTab({
             {/* Header */}
             <div className="text-center mb-6">
                 <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Home</h2>
+                <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                 <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
             </div>
 
             {/* FAMILY SPACE */}
             <div className="mb-8">
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Family Space</div>
-                {(editingFamily || !familyProfile?.familyName) ? (
+                {editingFamily ? (
                     <div className="bg-white border border-gray-200 rounded-xl p-4">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                         <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                         <div className="flex gap-2">
-                            <button onClick={async () => { const updated = { ...familyProfile, familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
-                            {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
+                            <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                            <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>
                         </div>
                     </div>
                 ) : (
                     <div className="bg-white border border-gray-200 rounded-xl p-4">
                         <div className="flex justify-between items-center">
                             <div>
-                                <div className="font-medium text-gray-800">📚 {`The ${familyProfile.familyName} Family Library`}</div>
+                                <div className="font-medium text-gray-800">📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</div>
+                                <div className="text-xs text-gray-500 mt-1">What matters most: building the habit</div>
+                                <div className="text-xs text-gray-500">Your reading routine: flexible</div>
                             </div>
                             <button onClick={() => setEditingFamily(true)} className="text-xs text-amber-700 font-medium">Edit</button>
                         </div>
@@ -4507,6 +4508,7 @@ function SettingsModal({
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg p-1">✕</button>
                     <div className="text-center">
                         <h2 className="text-lg font-semibold text-gray-800" style={{ fontFamily: "'Playfair Display', serif" }}>Home</h2>
+                        <p className="text-sm text-amber-700 font-medium">{familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</p>
                         <p className="text-xs text-gray-400 mt-1">A place for your shared stories</p>
                     </div>
                 </div>
@@ -4515,20 +4517,22 @@ function SettingsModal({
                     {/* FAMILY SPACE */}
                     <div className="mb-8">
                         <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Family Space</div>
-                        {(editingFamily || !familyProfile?.familyName) ? (
+                        {editingFamily ? (
                             <div className="bg-white border border-gray-200 rounded-xl p-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                                 <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { const updated = { ...familyProfile, familyName: familyName.trim() }; setFamilyProfile(updated); if (user) { try { await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
-                                    {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
+                                    <button onClick={() => { setFamilyProfile({ ...familyProfile, familyName: familyName.trim() }); setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                                    <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>
                                 </div>
                             </div>
                         ) : (
                             <div className="bg-white border border-gray-200 rounded-xl p-4">
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <div className="font-medium text-gray-800">📚 {`The ${familyProfile.familyName} Family Library`}</div>
+                                        <div className="font-medium text-gray-800">📚 {familyProfile?.familyName ? `The ${familyProfile.familyName} Family Library` : 'Your Library'}</div>
+                                        <div className="text-xs text-gray-500 mt-1">What matters most: building the habit</div>
+                                        <div className="text-xs text-gray-500">Your reading routine: flexible</div>
                                     </div>
                                     <button onClick={() => setEditingFamily(true)} className="text-xs text-amber-700 font-medium">Edit</button>
                                 </div>
