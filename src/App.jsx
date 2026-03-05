@@ -4801,6 +4801,270 @@ function ExportImportModal({ onClose, onExport, onImport }) {
     );
 }
 
+// Report Modal - Generate PDF or CSV reading report for a child
+function ReportModal({ child, logs, onClose }) {
+    const [generating, setGenerating] = useState(false);
+    const [dateRange, setDateRange] = useState('all');
+
+    const getFilteredLogs = () => {
+        const now = new Date();
+        if (dateRange === 'week') {
+            const weekAgo = new Date(now);
+            weekAgo.setDate(now.getDate() - 7);
+            return logs.filter(l => new Date(l.date) >= weekAgo);
+        }
+        if (dateRange === 'month') {
+            const monthAgo = new Date(now);
+            monthAgo.setMonth(now.getMonth() - 1);
+            return logs.filter(l => new Date(l.date) >= monthAgo);
+        }
+        if (dateRange === '3months') {
+            const threeMonthsAgo = new Date(now);
+            threeMonthsAgo.setMonth(now.getMonth() - 3);
+            return logs.filter(l => new Date(l.date) >= threeMonthsAgo);
+        }
+        return logs;
+    };
+
+    const generatePDF = () => {
+        setGenerating(true);
+        try {
+            const filteredLogs = getFilteredLogs();
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 16;
+            let y = 20;
+
+            // Header
+            doc.setFontSize(20);
+            doc.setTextColor(180, 83, 9); // amber-700
+            doc.text('OurBookmark', margin, y);
+            y += 10;
+
+            doc.setFontSize(13);
+            doc.setTextColor(60, 60, 60);
+            doc.text(`Reading Report: ${child.name}`, margin, y);
+            y += 7;
+
+            if (child.grade) {
+                doc.setFontSize(10);
+                doc.setTextColor(120, 120, 120);
+                doc.text(`Grade: ${child.grade}`, margin, y);
+                y += 6;
+            }
+
+            doc.setFontSize(10);
+            doc.setTextColor(120, 120, 120);
+            const rangeLabel = dateRange === 'week' ? 'Last 7 days'
+                : dateRange === 'month' ? 'Last 30 days'
+                : dateRange === '3months' ? 'Last 3 months'
+                : 'All time';
+            doc.text(`Period: ${rangeLabel}    Generated: ${new Date().toLocaleDateString()}`, margin, y);
+            y += 10;
+
+            // Divider
+            doc.setDrawColor(220, 150, 50);
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+
+            // Summary stats
+            const totalMinutes = filteredLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+            const uniqueBooks = new Set(filteredLogs.map(l => l.bookTitle)).size;
+            const uniqueDays = new Set(filteredLogs.map(l => l.date)).size;
+            const finishedBooks = filteredLogs.filter(l => l.isFinished).length;
+
+            doc.setFontSize(11);
+            doc.setTextColor(40, 40, 40);
+            doc.text('Summary', margin, y);
+            y += 7;
+
+            doc.setFontSize(10);
+            doc.setTextColor(70, 70, 70);
+            doc.text(`Total reading sessions: ${filteredLogs.length}`, margin + 4, y); y += 6;
+            doc.text(`Total minutes read: ${totalMinutes} (${(totalMinutes / 60).toFixed(1)} hrs)`, margin + 4, y); y += 6;
+            doc.text(`Unique books: ${uniqueBooks}`, margin + 4, y); y += 6;
+            doc.text(`Days with reading: ${uniqueDays}`, margin + 4, y); y += 6;
+            if (finishedBooks > 0) {
+                doc.text(`Books completed: ${finishedBooks}`, margin + 4, y); y += 6;
+            }
+            y += 4;
+
+            // Divider
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+
+            // Reading log table
+            doc.setFontSize(11);
+            doc.setTextColor(40, 40, 40);
+            doc.text('Reading Log', margin, y);
+            y += 7;
+
+            // Table headers
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Date', margin + 2, y);
+            doc.text('Book', margin + 30, y);
+            doc.text('Minutes', margin + 120, y);
+            doc.text('Done', margin + 148, y);
+            y += 4;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+
+            const sortedLogs = [...filteredLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            doc.setTextColor(50, 50, 50);
+            for (const log of sortedLogs) {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                const dateStr = new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+                const titleStr = (log.bookTitle || '').slice(0, 45);
+                doc.text(dateStr, margin + 2, y);
+                doc.text(titleStr, margin + 30, y);
+                doc.text(String(log.minutes || 0), margin + 123, y);
+                doc.text(log.isFinished ? 'Yes' : '', margin + 150, y);
+                y += 6;
+            }
+
+            if (filteredLogs.length === 0) {
+                doc.setTextColor(150, 150, 150);
+                doc.text('No reading logs for this period.', margin + 4, y);
+            }
+
+            // Footer
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(160, 160, 160);
+                doc.text('Generated by OurBookmark (ourbookmark.com)', margin, 290);
+                doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, 290);
+            }
+
+            const safeName = child.name.replace(/\s+/g, '_');
+            doc.save(`${safeName}_reading_report.pdf`);
+        } catch (err) {
+            console.error('PDF generation error:', err);
+            alert('Something went wrong generating the PDF. Please try again.');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const generateCSV = () => {
+        const filteredLogs = getFilteredLogs();
+        const headers = ['Date', 'Book Title', 'Minutes', 'Hours', 'Genre', 'Subject', 'Finished', 'Times Read'];
+        const rows = [...filteredLogs]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(l => [
+                l.date,
+                `"${(l.bookTitle || '').replace(/"/g, '""')}"`,
+                l.minutes || 0,
+                (l.hours || (l.minutes / 60)).toFixed(2),
+                l.genre || '',
+                l.subject || '',
+                l.isFinished ? 'Yes' : 'No',
+                l.timesRead || 1,
+            ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${child.name.replace(/\s+/g, '_')}_reading_log.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const filteredLogs = getFilteredLogs();
+    const totalMinutes = filteredLogs.reduce((sum, l) => sum + (l.minutes || 0), 0);
+    const uniqueBooks = new Set(filteredLogs.map(l => l.bookTitle)).size;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-5 z-50" onClick={onClose}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl" onClick={e => e.stopPropagation()}>
+                <h2 className="text-xl font-semibold mb-1 text-gray-800">📄 Reading Report</h2>
+                <p className="text-sm text-gray-500 mb-5">{child.name}{child.grade ? ` · ${child.grade}` : ''}</p>
+
+                {/* Date range selector */}
+                <div className="mb-5">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {[
+                            { value: 'week', label: 'Last 7 days' },
+                            { value: 'month', label: 'Last 30 days' },
+                            { value: '3months', label: 'Last 3 months' },
+                            { value: 'all', label: 'All time' },
+                        ].map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setDateRange(opt.value)}
+                                className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                                    dateRange === opt.value
+                                        ? 'bg-amber-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Preview stats */}
+                <div className="bg-amber-50 rounded-xl p-4 mb-5 flex gap-4 text-center">
+                    <div className="flex-1">
+                        <div className="text-2xl font-bold text-amber-700">{filteredLogs.length}</div>
+                        <div className="text-xs text-gray-500">Sessions</div>
+                    </div>
+                    <div className="flex-1">
+                        <div className="text-2xl font-bold text-amber-700">{uniqueBooks}</div>
+                        <div className="text-xs text-gray-500">Books</div>
+                    </div>
+                    <div className="flex-1">
+                        <div className="text-2xl font-bold text-amber-700">{totalMinutes}</div>
+                        <div className="text-xs text-gray-500">Minutes</div>
+                    </div>
+                </div>
+
+                {/* Export buttons */}
+                <div className="space-y-3 mb-4">
+                    <button
+                        onClick={generatePDF}
+                        disabled={generating || filteredLogs.length === 0}
+                        className="w-full bg-amber-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-amber-700 transition-all disabled:opacity-50"
+                    >
+                        {generating ? 'Generating...' : '📄 Download PDF Report'}
+                    </button>
+                    <button
+                        onClick={generateCSV}
+                        disabled={filteredLogs.length === 0}
+                        className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-all disabled:opacity-50"
+                    >
+                        📊 Download CSV (spreadsheet)
+                    </button>
+                </div>
+
+                {filteredLogs.length === 0 && (
+                    <p className="text-sm text-center text-gray-400 mb-3">No logs in this date range.</p>
+                )}
+
+                <button
+                    onClick={onClose}
+                    className="w-full bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-all"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // Share Card Modal - Generate shareable monthly reading card
 function ShareCardModal({ child, logs, onClose, children, familyProfile }) {
     const cardRef = React.useRef(null);
