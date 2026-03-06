@@ -326,6 +326,75 @@ const [selectedChild, setSelectedChild] = useState(null);
                     }));
                     setChildren(mappedChildren);
                     setStorageData('mybookmark_children', mappedChildren);
+                } else {
+                    // No Supabase data — check if there's localStorage data to migrate
+                    const migrationKey = `mybookmark_migrated_${user.id}`;
+                    const alreadyMigrated = localStorage.getItem(migrationKey);
+                    if (!alreadyMigrated) {
+                        const localChildren = getStorageData('mybookmark_children', []);
+                        const localLogs = getStorageData('mybookmark_logs', []);
+                        if (localChildren.length > 0) {
+                            console.log('Migrating localStorage data to Supabase...');
+                            try {
+                                // Map old local child IDs to new Supabase IDs
+                                const idMap = {};
+                                for (const child of localChildren) {
+                                    const { data: newChild } = await supabase
+                                        .from('children')
+                                        .insert({ user_id: user.id, name: child.name, grade: child.grade || '' })
+                                        .select()
+                                        .single();
+                                    if (newChild) idMap[child.id] = newChild.id;
+                                }
+
+                                // Migrate logs using new child IDs
+                                for (const log of localLogs) {
+                                    const newChildId = idMap[log.childId];
+                                    if (!newChildId) continue;
+                                    const titleClean = (log.bookTitle || '').split(' by ')[0].trim();
+                                    if (!titleClean) continue;
+
+                                    // Upsert book
+                                    let bookId = null;
+                                    const { data: existingBook } = await supabase
+                                        .from('books')
+                                        .select('id')
+                                        .eq('title', titleClean)
+                                        .limit(1);
+                                    if (existingBook && existingBook.length > 0) {
+                                        bookId = existingBook[0].id;
+                                    } else {
+                                        const { data: newBook } = await supabase
+                                            .from('books')
+                                            .insert({ title: titleClean, cover_url: log.coverUrl || null })
+                                            .select()
+                                            .single();
+                                        if (newBook) bookId = newBook.id;
+                                    }
+
+                                    await supabase.from('reading_logs').insert({
+                                        child_id: newChildId,
+                                        book_id: bookId,
+                                        date: log.date || new Date().toISOString().split('T')[0],
+                                        minutes: log.minutes || 0,
+                                    });
+                                }
+
+                                // Migrate family profile
+                                const localProfile = getStorageData('mybookmark_family', null);
+                                if (localProfile) {
+                                    await supabase.from('family_profiles').upsert({ user_id: user.id, data: localProfile });
+                                }
+
+                                // Mark migration done and reload
+                                localStorage.setItem(migrationKey, 'true');
+                                console.log('Migration complete — reloading from Supabase');
+                                loadFromSupabase();
+                            } catch (migErr) {
+                                console.warn('Migration error:', migErr);
+                            }
+                        }
+                    }
                 }
             } catch (err) {
                 console.warn('Error loading children from Supabase:', err);
