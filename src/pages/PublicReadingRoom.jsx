@@ -6,11 +6,14 @@ const FALLBACK_AMAZON_TAG = import.meta.env.VITE_AMAZON_FALLBACK_TAG || "ourbook
 
 function amazonLink(book, profile) {
   const tag = profile?.affiliate_amazon || FALLBACK_AMAZON_TAG;
-  const isbn = book?.isbn_13 || book?.isbn_10;
+  const isbn10 = book?.isbn_10;
+  const isbn13 = book?.isbn_13;
   const title = book?.title || "";
-  // Direct product page link converts better than search
-  if (isbn) return `https://www.amazon.com/dp/${isbn}/?tag=${encodeURIComponent(tag)}`;
-  return `https://www.amazon.com/s?k=${encodeURIComponent(title)}&tag=${encodeURIComponent(tag)}`;
+  // /dp/ only works with ISBN-10 (same as ASIN for books)
+  if (isbn10) return `https://www.amazon.com/dp/${isbn10}/?tag=${encodeURIComponent(tag)}`;
+  // ISBN-13 or title: use search instead
+  const q = isbn13 || title;
+  return `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${encodeURIComponent(tag)}`;
 }
 
 function bookshopLink(book, profile) {
