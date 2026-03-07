@@ -4330,6 +4330,11 @@ function SettingsTab({
 
     const activeChildren = children.filter(c => !c.archived);
     const archivedChildren = children.filter(c => c.archived);
+    // Sync familyName when familyProfile loads async from Supabase
+    useEffect(() => {
+        if (familyProfile?.familyName) setFamilyName(familyProfile.familyName);
+    }, [familyProfile?.familyName]);
+
 
     const getChildStats = (child) => {
         const childLogs = (logs || []).filter(l => l.childId === child.id);
@@ -4560,6 +4565,11 @@ function SettingsModal({
     const [familyName, setFamilyName] = useState(familyProfile?.familyName || '');
     const [editingChild, setEditingChild] = useState(null);
     const [showArchived, setShowArchived] = useState(false);
+
+    // Sync familyName when familyProfile loads async from Supabase
+    useEffect(() => {
+        if (familyProfile?.familyName) setFamilyName(familyProfile.familyName);
+    }, [familyProfile?.familyName]);
 
     const activeChildren = children.filter(c => !c.archived);
     const archivedChildren = children.filter(c => c.archived);
