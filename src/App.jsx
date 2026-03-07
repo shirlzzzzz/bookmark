@@ -644,8 +644,7 @@ const [selectedChild, setSelectedChild] = useState(null);
             } catch (e) { console.warn('Supabase addLog error:', e); }
         }
 
-        setLogs([newLog, ...logs]);
-        setShowAddLog(false);
+        setLogs(prev => [newLog, ...prev]);
         setError(null);
         
         // Show celebration
@@ -3402,7 +3401,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
         }
 
         // Try to match child name
-        let matchedChildId = selectedChildId;
+        let matchedChildId = selectedChildIds.values().next().value;
         for (const child of children) {
             if (transcript.includes(child.name.toLowerCase())) {
                 matchedChildId = child.id;
@@ -3448,12 +3447,14 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (selectedChildIds.size > 0 && bookTitle.trim() && minutes) {
-            selectedChildIds.forEach(childId => {
-                onAdd(childId, bookTitle.trim(), minutes, date, null, null, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal);
-            });
+            const childArray = Array.from(selectedChildIds);
+            for (const childId of childArray) {
+                await onAdd(childId, bookTitle.trim(), minutes, date, null, null, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal);
+            }
+            onClose();
         }
     };
 
@@ -4410,7 +4411,7 @@ function SettingsTab({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                         <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                         <div className="flex gap-2">
-                            <button onClick={async () => { const updated = { ...familyProfile, familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                            <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { const { error: upsertErr } = await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }, { onConflict: 'user_id' }); if (upsertErr) console.warn('Supabase family profile upsert error:', upsertErr); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
                             {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
                         </div>
                     </div>
@@ -4620,7 +4621,7 @@ function SettingsModal({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                                 <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { const updated = { ...familyProfile, familyName: familyName.trim() }; setFamilyProfile(updated); if (user) { try { await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                                    <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { const { error: upsertErr } = await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }, { onConflict: 'user_id' }); if (upsertErr) console.warn('Supabase family profile upsert error:', upsertErr); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
                                     {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
                                 </div>
                             </div>
