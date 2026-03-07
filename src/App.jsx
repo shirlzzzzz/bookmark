@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
+import { Capacitor } from '@capacitor/core';
 import BookshelfShelves from "./components/BookshelfShelves";
 import Auth from './Auth';
 import PublicReadingRoom from './pages/PublicReadingRoom';
@@ -208,6 +209,7 @@ const fetchBookCover = async (bookTitle) => {
 
 // Main App Component
 function MainApp({ user, onSignOut, onOpenAuth }) {
+    const isNative = Capacitor.isNativePlatform();
     // Smart default view: Log tab if setup complete, otherwise show onboarding
     const [currentView, setCurrentView] = useState('discover');
     const [children, setChildren] = useState([]);
@@ -871,8 +873,8 @@ const [selectedChild, setSelectedChild] = useState(null);
     };
 
     return (
-        <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif" }}>
-            <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-xl">
+        <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif", ...(isNative && { height: '100dvh', overflow: 'hidden' }) }}>
+            <div className="max-w-2xl mx-auto bg-white min-h-screen shadow-xl" style={isNative ? { height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } : {}}>
                 {/* Header */}
                 {(() => {
                     // Calculate weekly stats for compact header
@@ -3167,7 +3169,7 @@ function EditChildModal({ child, onClose, onSave }) {
 
 // Add Log Modal
 function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
-    const [selectedChildId, setSelectedChildId] = useState(children[0]?.id || '');
+    const [selectedChildIds, setSelectedChildIds] = useState(new Set(children[0]?.id ? [children[0].id] : []));
     const [bookTitle, setBookTitle] = useState(prefillBook?.title || '');
     const [minutes, setMinutes] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -3213,7 +3215,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
     const quickMinutes = bookType === 'chapter' ? [15, 20, 30, 60] : [10, 15, 20, 30];
     
     // Check if selected child is older (student/homeschool)
-    const selectedChild = children.find(c => c.id === selectedChildId);
+    const selectedChild = children.find(c => selectedChildIds.has(c.id));
 
     // Check if on iOS (speech recognition doesn't work on iOS browsers)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -3434,7 +3436,7 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
         }
 
         // Update form fields
-        if (matchedChildId) setSelectedChildId(matchedChildId);
+        if (matchedChildId) setSelectedChildIds(new Set([matchedChildId]));
         if (extractedTitle) setBookTitle(extractedTitle);
         if (extractedMinutes) setMinutes(extractedMinutes);
 
@@ -3448,8 +3450,10 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (selectedChildId && bookTitle.trim() && minutes) {
-            onAdd(selectedChildId, bookTitle.trim(), minutes, date, null, null, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal);
+        if (selectedChildIds.size > 0 && bookTitle.trim() && minutes) {
+            selectedChildIds.forEach(childId => {
+                onAdd(childId, bookTitle.trim(), minutes, date, null, null, coverUrl, timesRead, isFinished, chapterCurrent, chapterTotal);
+            });
         }
     };
 
@@ -3504,19 +3508,38 @@ function AddLogModal({ children, logs, onClose, onAdd, prefillBook }) {
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Child *</label>
-                        <select
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                            value={selectedChildId}
-                            onChange={(e) => setSelectedChildId(e.target.value)}
-                            required
-                        >
-                            {children.map(child => (
-                                <option key={child.id} value={child.id}>
-                                    {child.name}
-                                </option>
-                            ))}
-                        </select>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {children.length > 1 ? 'Who read? (select all that apply)' : 'Child'} *
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {children.map(child => {
+                                const checked = selectedChildIds.has(child.id);
+                                return (
+                                    <button
+                                        key={child.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedChildIds(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(child.id)) {
+                                                    if (next.size > 1) next.delete(child.id);
+                                                } else {
+                                                    next.add(child.id);
+                                                }
+                                                return next;
+                                            });
+                                        }}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
+                                            checked
+                                                ? 'bg-amber-500 border-amber-500 text-white'
+                                                : 'bg-white border-gray-300 text-gray-600 hover:border-amber-400'
+                                        }`}
+                                    >
+                                        {checked ? '✓ ' : ''}{child.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     <div className="mb-4 relative">
