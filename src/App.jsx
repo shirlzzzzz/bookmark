@@ -39,40 +39,16 @@ const getWeekStart = (date = new Date()) => {
     return new Date(d.setDate(diff));
 };
 
-// Save family profile to Supabase (select → insert or update)
+// Save family profile to Supabase via the profiles table
 const saveFamilyProfileToSupabase = async (userId, profileData) => {
     try {
-        // Check if a row exists
-        const { data: existing, error: selectErr } = await supabase
-            .from('family_profiles')
-            .select('user_id')
-            .eq('user_id', userId)
-            .maybeSingle();
-
-        if (selectErr) {
-            console.warn('Supabase family profile select error:', selectErr);
+        const { error: updateErr } = await supabase
+            .from('profiles')
+            .update({ family_data: profileData })
+            .eq('id', userId);
+        if (updateErr) {
+            console.warn('Supabase family profile update error:', updateErr);
             return false;
-        }
-
-        if (existing) {
-            // Update existing row
-            const { error: updateErr } = await supabase
-                .from('family_profiles')
-                .update({ data: profileData })
-                .eq('user_id', userId);
-            if (updateErr) {
-                console.warn('Supabase family profile update error:', updateErr);
-                return false;
-            }
-        } else {
-            // Insert new row
-            const { error: insertErr } = await supabase
-                .from('family_profiles')
-                .insert({ user_id: userId, data: profileData });
-            if (insertErr) {
-                console.warn('Supabase family profile insert error:', insertErr);
-                return false;
-            }
         }
         return true;
     } catch (e) {
@@ -478,14 +454,14 @@ const [selectedChild, setSelectedChild] = useState(null);
             try {
                 // Load family profile
                 const { data: dbProfile } = await supabase
-                    .from('family_profiles')
-                    .select('*')
-                    .eq('user_id', user.id)
+                    .from('profiles')
+                    .select('family_data')
+                    .eq('id', user.id)
                     .single();
                 
-                if (dbProfile?.data) {
-                    setFamilyProfile(dbProfile.data);
-                    setStorageData('mybookmark_family', dbProfile.data);
+                if (dbProfile?.family_data) {
+                    setFamilyProfile(dbProfile.family_data);
+                    setStorageData('mybookmark_family', dbProfile.family_data);
                 }
             } catch (err) {
                 console.warn('Error loading profile from Supabase:', err);
