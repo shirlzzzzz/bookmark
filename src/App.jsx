@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import jsPDF from 'jspdf';
-import { Capacitor } from '@capacitor/core';
+// Capacitor: optional — only available in native builds
+const Capacitor = globalThis?.Capacitor ?? { isNativePlatform: () => false };
 import BookshelfShelves from "./components/BookshelfShelves";
 import Auth from './Auth';
 import PublicReadingRoom from './pages/PublicReadingRoom';
