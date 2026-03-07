@@ -39,6 +39,48 @@ const getWeekStart = (date = new Date()) => {
     return new Date(d.setDate(diff));
 };
 
+// Save family profile to Supabase (select → insert or update)
+const saveFamilyProfileToSupabase = async (userId, profileData) => {
+    try {
+        // Check if a row exists
+        const { data: existing, error: selectErr } = await supabase
+            .from('family_profiles')
+            .select('user_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (selectErr) {
+            console.warn('Supabase family profile select error:', selectErr);
+            return false;
+        }
+
+        if (existing) {
+            // Update existing row
+            const { error: updateErr } = await supabase
+                .from('family_profiles')
+                .update({ data: profileData })
+                .eq('user_id', userId);
+            if (updateErr) {
+                console.warn('Supabase family profile update error:', updateErr);
+                return false;
+            }
+        } else {
+            // Insert new row
+            const { error: insertErr } = await supabase
+                .from('family_profiles')
+                .insert({ user_id: userId, data: profileData });
+            if (insertErr) {
+                console.warn('Supabase family profile insert error:', insertErr);
+                return false;
+            }
+        }
+        return true;
+    } catch (e) {
+        console.warn('Failed to save family profile to Supabase:', e);
+        return false;
+    }
+};
+
 // ── Book Search: ISBNdb (primary) → Google Books proxy (fallback) ──
 
 // Build best cover URL: direct image → Open Library via ISBN → null
@@ -386,7 +428,7 @@ const [selectedChild, setSelectedChild] = useState(null);
                                 // Migrate family profile
                                 const localProfile = getStorageData('mybookmark_family', null);
                                 if (localProfile) {
-                                    await supabase.from('family_profiles').upsert({ user_id: user.id, data: localProfile });
+                                    await saveFamilyProfileToSupabase(user.id, localProfile);
                                 }
 
                                 // Mark migration done and reload
@@ -4412,7 +4454,7 @@ function SettingsTab({
                         <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                         <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                         <div className="flex gap-2">
-                            <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { const { error: upsertErr } = await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }, { onConflict: 'user_id' }); if (upsertErr) console.warn('Supabase family profile upsert error:', upsertErr); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                            <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { await saveFamilyProfileToSupabase(user.id, updated); } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
                             {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
                         </div>
                     </div>
@@ -4622,7 +4664,7 @@ function SettingsModal({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Library name</label>
                                 <input type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="w-full p-2.5 border border-gray-300 rounded-lg text-sm mb-3" placeholder="The Johnson Family Library" />
                                 <div className="flex gap-2">
-                                    <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { try { const { error: upsertErr } = await supabase.from('family_profiles').upsert({ user_id: user.id, data: updated }, { onConflict: 'user_id' }); if (upsertErr) console.warn('Supabase family profile upsert error:', upsertErr); } catch(e) { console.warn('Failed to save family profile:', e); } } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
+                                    <button onClick={async () => { const updated = { ...(familyProfile || {}), familyName: familyName.trim() }; setFamilyProfile(updated); setStorageData('mybookmark_family', updated); if (user) { await saveFamilyProfileToSupabase(user.id, updated); } setEditingFamily(false); }} className="flex-1 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Save</button>
                                     {familyProfile?.familyName && <button onClick={() => setEditingFamily(false)} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-600">Cancel</button>}
                                 </div>
                             </div>
